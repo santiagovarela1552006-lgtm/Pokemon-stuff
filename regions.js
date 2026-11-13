@@ -486,7 +486,7 @@ LEAGUE({ region:'nordhaven', node:'n_league', title:'Challenge the Aurora League
     { id:'n_e4', name:'Elite Gunnar', team:[['voltwyrm',57],['fjorddrake',58],['skywyrm',58],['fjorddrake',60]], line:'“The dragons came north first. They will be here last.”', outro:'“...They bow to you. I have never seen that.”', text:'GUNNAR. A ledge on the open mountainside, dragons circling below. Gunnar does not raise his voice. “The dragons came north first. They will be here last.”' }
   ],
   champ:{ id:'n_champ', name:'Champion Astrid', team:[['runegolem',59],['fenrime',59],['krakenmaw',60],['borealynx',60],['voltwyrm',61],['polarvixen',63]], apex:['krakenmaw'], line:'“Three regions. Let’s see if it shows.”', outro:'“It shows.”', text:'The last door opens onto the sky itself: a platform of glass under the singing aurora. Champion Astrid stands at its edge in a cloak of white fur. “Three regions, three fresh starts. Let’s see if it shows.”' },
-  hof:'Astrid bows, deep and slow. Behind her the aurora brightens until the whole sky is singing. “Nordhaven has a new champion. So does the sky.”\n\nCorin throws an arm around your shoulders and doesn’t say anything for once. Then: “There are more regions out there, you know. Somewhere.”' });
+  hof:'Astrid bows, deep and slow. Behind her the aurora brightens until the whole sky is singing. “Nordhaven has a new champion. So does the sky.”\n\nCorin throws an arm around your shoulders and doesn’t say anything for once. Then: “There’s a city down the coast that never sleeps. Arclight. The Undersea Express runs there from Skerrport.” They grin. “Fresh start number four?”' });
 
 /* ---------------- Rivals ---------------- */
 RIVAL_TEAMS.rival_s0 = [[0,5]];
@@ -612,51 +612,71 @@ const REMATCH_S = [
   ['s_cliff','kade2','Leader Kade','Kade has put up three new lightning rods. “Bigger storm, champion! Let’s see you stand in it!”','“What a JOLT!”',[['djinnspark',66],['heliskink',66],['stormkite',67],['heliskink',69]],['stormkite']],
   ['s_aurelia','calix2','Leader Calix','Calix bows from the altar fire. “The sun rises again. Shall we see whom it favors today?”','“The sun approves. Again.”',[['sunbloom',67],['solfalcon',67],['pyrocobra',68],['solscarab',68],['sunmane',70]],['sunmane']]
 ];
-for (const [node, tid, name, intro, outro, team, apex] of REMATCH_S) {
-  T(tid, name, 110, team, '', outro, { ai:'smart', heals:2, apex });
-  SC('rematch_' + tid, { node, title:'Rematch: ' + name, gym:true, repeat:true, req:g => F(g, 'champion_solenne'), steps:{
-    start:{ t:intro, c:[{ l:'Battle ' + name, battle:tid, rematch:true, soft:true, go:'won', lose:'lost' }, { l:'Not today', go:'leave' }] },
-    won:{ t:g => outro + (F(g, 'rm_' + tid) ? '' : ' Your first rematch win here earns you two Wisdom Fruits and a Max Salve.'), do:g => { if (!F(g, 'rm_' + tid)) { setF(g, 'rm_' + tid); g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 2; g.items.maxsalve = (g.items.maxsalve || 0) + 1; } }, end:true },
-    lost:{ t:'“Come back when you’re ready. I’ll be here.”', end:true },
-    leave:{ t:'Another time.', end:true }
+function REGION_REMATCHES(region, rows){
+  for (const [node, tid, name, intro, outro, team, apex] of rows) {
+    T(tid, name, 110, team, '', outro, { ai:'smart', heals:2, apex });
+    SC('rematch_' + tid, { node, title:'Rematch: ' + name, gym:true, repeat:true, req:g => F(g, 'champion_' + region), steps:{
+      start:{ t:intro, c:[{ l:'Battle ' + name, battle:tid, rematch:true, soft:true, go:'won', lose:'lost' }, { l:'Not today', go:'leave' }] },
+      won:{ t:g => outro + (F(g, 'rm_' + tid) ? '' : ' Your first rematch win here earns you two Wisdom Fruits and a Max Salve.'), do:g => { if (!F(g, 'rm_' + tid)) { setF(g, 'rm_' + tid); g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 2; g.items.maxsalve = (g.items.maxsalve || 0) + 1; } }, end:true },
+      lost:{ t:'“Come back when you’re ready. I’ll be here.”', end:true },
+      leave:{ t:'Another time.', end:true }
+    }});
+  }
+}
+REGION_REMATCHES('solenne', REMATCH_S);
+
+/* Tournament cups: three knockout rounds against random challengers, with healing between rounds.
+   Every cup won makes the next one two levels tougher. A typed cup draws all four of each
+   challenger's partners from one type, picked when the cup starts. */
+const CUP_ROUNDS = ['quarterfinal','semifinal','final'];
+function ordinal(n){ const t = n % 100; return n + (t > 10 && t < 14 ? 'th' : ['th','st','nd','rd'][n % 10] || 'th'); }
+const typeName = t => t[0].toUpperCase() + t.slice(1);
+function CUP(o){
+  const st = g => g[o.key] || (g[o.key] = { cups:0, round:1, foe:null });
+  const ensure = g => { const f = st(g).foe || { name:o.foeName, team:[[o.pool[0], o.base]], intro:'' }; Object.assign(TRAINERS[o.foe], { name:f.name, team:f.team, intro:f.intro }); };
+  const cupName = g => o.typed ? typeName(st(g).type || 'normal') + ' Cup' : o.cupName;
+  function round(g, n){
+    const s = st(g); let pool = o.pool;
+    if (n > 1) healParty();
+    s.round = n;
+    if (o.typed) {
+      if (n === 1 || !s.type) { const types = TYPES.filter(t => pool.filter(id => SPECIES[id].t.includes(t)).length >= 5); s.type = pick(types); }
+      pool = pool.filter(id => SPECIES[id].t.includes(s.type));
+    }
+    const lvl = Math.min(o.base + 20, o.base + 2 * s.cups) + (n - 1) * 2, left = pool.slice(), team = [];
+    for (let i = 0; i < 4; i++) team.push([left.splice(rnd(left.length), 1)[0], Math.min(100, lvl + rnd(2))]);
+    s.foe = { name:pick(o.names), team, intro:pick(o.lines) };
+    ensure(g);
+    return (n > 1 ? o.heal + '\n\n' : '') + `The ${o.typed ? cupName(g) + ' ' : ''}${CUP_ROUNDS[n - 1]}. ${s.foe.name} ${o.walk} with four partners around level ${lvl}.`;
+  }
+  function won(g){
+    const s = st(g); s.cups++;
+    const cash = 4000 + 500 * s.cups;
+    g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 3; g.items.maxsalve = (g.items.maxsalve || 0) + 2; g.items.absolute = (g.items.absolute || 0) + 1; g.money += cash;
+    return `${o.cheer} You win your ${s.cups === 1 ? 'first' : ordinal(s.cups)} ${o.typed ? 'Midwinter crown, the ' + cupName(g) : o.cupName}. Prize: 3 Wisdom Fruits, 2 Max Salves, ${fmtMoney(cash)} and an Absolute Capsule${o.trophy}. The next cup will be tougher.`;
+  }
+  T(o.foe, o.foeName, 80, [[o.pool[0], o.base]], '', o.outro, { ai:'smart', heals:1, dyn:ensure });
+  const battle = next => ({ l:'Battle', battle:o.foe, rematch:true, soft:true, lose:'lost', go:next });
+  SC(o.scene, { node:o.node, title:o.title, repeat:true, req:o.req, steps:{
+    start:{ t:g => o.intro + `\n\n${o.tally}: ${st(g).cups}.`, c:[{ l:'Enter the cup', go:'r1' }, { l:'Not today', go:'leave' }] },
+    leave:{ t:o.leave, end:true },
+    r1:{ t:g => round(g, 1), c:[battle('r2')] },
+    r2:{ t:g => round(g, 2), c:[battle('r3')] },
+    r3:{ t:g => round(g, 3), c:[battle('won')] },
+    won:{ t:g => won(g), end:true },
+    lost:{ t:g => `Knocked out in the ${CUP_ROUNDS[(st(g).round || 1) - 1]}. ${o.lost}`, end:true }
   }});
 }
 
-/* The Aurelia Sun Arena: three-round cups against random challengers */
-const SOLENNE_POOL = ['duneskorp','vinocerus','sunbloom','miragefen','brinewader','crestram','whirldust','heliskink','tombwrap','solscarab','dromedune','vintoxin','gecklord','sphinxara','tumbleroot','shimmeray','terraknight','palmquill','stormkite','sentrilith','brinegator','ibisage','pyrocobra','djinnspark','vinebeetle','canyonswift','sunmane','tarmaw','amphorite','jackalith','pearlord','plateaurtle','lilyhopper','pricklemaw','duneplume','axoltide','solfalcon','aloeking','prismaw','gloamscarab','moonfen','astralasp'];
-const ARENA_NAMES = ['Gladiator Rufio','Caravan Master Omari','Ace Trainer Delphine','Sandrunner Kaya','Duelist Amara','Veteran Bastian','Sun Priest Tahir','Glassblower Petra','Dune Racer Zara','Falconer Hamid','Oasis Warden Noor','Ace Trainer Leon'];
-const ARENA_LINES = ['“The crowd came to see you lose. Let’s not disappoint them.”','“I’ve trained in this arena since I could walk.”','“Champion or not, the sand doesn’t care.”','“Let’s give them a show.”','“I crossed the whole desert for this match.”'];
-const ARENA_ROUNDS = ['quarterfinal','semifinal','final'];
-function ensureArenaFoe(g){
-  const f = (g.arena && g.arena.foe) || { name:'Arena Challenger', team:[['sunmane',60]], intro:'' };
-  Object.assign(TRAINERS.arena_foe, { name:f.name, team:f.team, intro:f.intro });
-}
-function ordinal(n){ const t = n % 100; return n + (t > 10 && t < 14 ? 'th' : ['th','st','nd','rd'][n % 10] || 'th'); }
-function arenaRound(g, n){
-  if (n > 1) healParty();
-  g.arena.round = n;
-  const lvl = Math.min(80, 60 + 2 * g.arena.cups) + (n - 1) * 2, pool = SOLENNE_POOL.slice(), team = [];
-  for (let i = 0; i < 4; i++) team.push([pool.splice(rnd(pool.length), 1)[0], Math.min(100, lvl + rnd(2))]);
-  g.arena.foe = { name:pick(ARENA_NAMES), team, intro:pick(ARENA_LINES) };
-  ensureArenaFoe(g);
-  return (n > 1 ? 'The arena healers patch up your team between rounds.\n\n' : '') + `The ${ARENA_ROUNDS[n - 1]}. ${g.arena.foe.name} walks out to the roar of the crowd with four partners around level ${lvl}.`;
-}
-function arenaWon(g){
-  g.arena.cups++;
-  const cash = 4000 + 500 * g.arena.cups;
-  g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 3; g.items.maxsalve = (g.items.maxsalve || 0) + 2; g.items.absolute = (g.items.absolute || 0) + 1; g.money += cash;
-  return `The crowd is on its feet. You win your ${g.arena.cups === 1 ? 'first' : ordinal(g.arena.cups)} Sun Cup. Prize: 3 Wisdom Fruits, 2 Max Salves, ${fmtMoney(cash)} and an Absolute Capsule, polished like a trophy. The next cup will be tougher.`;
-}
-T('arena_foe','Arena Challenger',80,[['sunmane',60]],'','“What a match!”',{ ai:'smart', heals:1, dyn:ensureArenaFoe });
-SC('sunarena',{ node:'s_aurelia', title:'The Sun Arena cup', repeat:true, req:g => F(g, 'champion_solenne'), steps:{
-  start:{ t:g => `Behind the sun temple, the Aurelia Sun Arena rises in tiers of gold sandstone, packed with a roaring crowd. The arena master, a woman with a voice like a brass horn, waves you in. “A champion! Every cup is three rounds, knockout, with healers between rounds. Win and the next cup gets tougher.”\n\nSun Cups won: ${g.arena.cups}.`, c:[{ l:'Enter the cup', go:'r1' }, { l:'Not today', go:'leave' }] },
-  leave:{ t:'The arena master waves you back out into the bazaar.', end:true },
-  r1:{ t:g => arenaRound(g, 1), c:[{ l:'Battle', battle:'arena_foe', rematch:true, soft:true, lose:'lost', go:'r2' }] },
-  r2:{ t:g => arenaRound(g, 2), c:[{ l:'Battle', battle:'arena_foe', rematch:true, soft:true, lose:'lost', go:'r3' }] },
-  r3:{ t:g => arenaRound(g, 3), c:[{ l:'Battle', battle:'arena_foe', rematch:true, soft:true, lose:'lost', go:'won' }] },
-  won:{ t:g => arenaWon(g), end:true },
-  lost:{ t:g => `Knocked out in the ${ARENA_ROUNDS[(g.arena.round || 1) - 1]}. The crowd cheers you off anyway. “Come back for the next cup,” the arena master booms.`, end:true }
-}});
+/* The Aurelia Sun Arena */
+CUP({ scene:'sunarena', foe:'arena_foe', key:'arena', node:'s_aurelia', base:60, title:'The Sun Arena cup', req:g => F(g, 'champion_solenne'),
+  pool:['duneskorp','vinocerus','sunbloom','miragefen','brinewader','crestram','whirldust','heliskink','tombwrap','solscarab','dromedune','vintoxin','gecklord','sphinxara','tumbleroot','shimmeray','terraknight','palmquill','stormkite','sentrilith','brinegator','ibisage','pyrocobra','djinnspark','vinebeetle','canyonswift','sunmane','tarmaw','amphorite','jackalith','pearlord','plateaurtle','lilyhopper','pricklemaw','duneplume','axoltide','solfalcon','aloeking','prismaw','gloamscarab','moonfen','astralasp'],
+  names:['Gladiator Rufio','Caravan Master Omari','Ace Trainer Delphine','Sandrunner Kaya','Duelist Amara','Veteran Bastian','Sun Priest Tahir','Glassblower Petra','Dune Racer Zara','Falconer Hamid','Oasis Warden Noor','Ace Trainer Leon'],
+  lines:['“The crowd came to see you lose. Let’s not disappoint them.”','“I’ve trained in this arena since I could walk.”','“Champion or not, the sand doesn’t care.”','“Let’s give them a show.”','“I crossed the whole desert for this match.”'],
+  foeName:'Arena Challenger', outro:'“What a match!”', cupName:'Sun Cup', tally:'Sun Cups won', trophy:', polished like a trophy',
+  intro:'Behind the sun temple, the Aurelia Sun Arena rises in tiers of gold sandstone, packed with a roaring crowd. The arena master, a woman with a voice like a brass horn, waves you in. “A champion! Every cup is three rounds, knockout, with healers between rounds. Win and the next cup gets tougher.”',
+  leave:'The arena master waves you back out into the bazaar.', heal:'The arena healers patch up your team between rounds.', walk:'walks out to the roar of the crowd',
+  cheer:'The crowd is on its feet.', lost:'The crowd cheers you off anyway. “Come back for the next cup,” the arena master booms.' });
 
 /* The moon serpent */
 T('tomb_guard','Tomb Guardians',0,[['sentrilith',66],['amphorite',66],['jackalith',67],['sphinxara',68]],'The guardians’ eyes open.','The guardians go still.',{ ai:'smart', heals:1, nomoney:true, apex:['sphinxara'] });
@@ -690,6 +710,76 @@ SC('sp_tomb',{ node:'s_glass', title:'The Moon Tomb', repeat:true, req:g => F(g,
 MILESTONES.push(
   ['glass_open','Champion Seraphine and Professor Reyne revealed that the old kings sealed a second, moon serpent in the Glass Desert east of Duneway.'],
   ['tomb_found','The player crossed the Glass Desert, rescued a stranded Silas Crane, and found the Moon Tomb.']
+);
+
+/* ---------------- Nordhaven postgame ---------------- */
+S('cryoling','Cryoling',['ice'],[52,58,78,50],13,100,[60,'cryolith'],'round',['gem','spikes'],'A chip of the oldest ice in the north. It glows blue when someone nearby tells a lie.');
+S('cryolith','Cryolith',['ice','rock'],[100,104,130,46],17,240,null,'tall',['gem','rocks','spikes','big'],'A pillar of ancient ice that walks. Bubbles of air from ten thousand years ago still drift inside it.');
+S('jotling','Jotling',['fighting','ice'],[104,118,96,70],17,240,null,'tall',['horns','mane','big'],'A young frost giant no taller than a house. It sleeps through summer and wrestles glaciers all winter.');
+S('rimeray','Rimeray',['water','ice'],[92,104,90,108],17,240,null,'fish',['wings','spots','fin'],'Glides through rivers under the glacier that have never seen daylight, trailing threads of frost.');
+S('hearthwisp','Hearthwisp',['fire','ghost'],[84,110,78,110],17,240,null,'ghost',['topflame','crest'],'The last flame of a giants’ hall, still looking for the hearth it used to warm.');
+S('glacitan','Glacitan',['ice','fighting'],[124,132,118,74],27,350,null,'tall',['horns','mane','spikes','aura','big'],'The frost giant sealed beneath Nordhaven’s glacier. The sagas say the long winters were only Glacitan turning over in its sleep.',{legend:true, ex:{1:'recover'}});
+KEYS.giantshorn = ['Giant’s Horn', 'A horn of yellowed ice the rangers kept for a thousand years. Its note opens the wall at the bottom of Glacier Pass.'];
+
+NN('n_deep',{n:'The Frozen Deep', k:'cave', x:48, y:182, tier:6, adj:['n_glacier'],
+  req:g=>F(g,'deep_open'), lock:'A wall of blue ice seals the deepest part of Glacier Pass. Nothing you carry can open it.',
+  d:'Below Glacier Pass the ice is older than the north’s first saga: blue caverns, frozen rivers, and halls built for people four times your size.',
+  enc:[['cryoling',60,63,14],['cryolith',62,65,5],['jotling',62,66,5],['rimeray',62,66,6],['hearthwisp',62,66,5],['tuskolith',60,64,8],['glaciclaw',60,64,8],['frostgeist',60,64,8],['snowstride',60,64,6],['runebreaker',60,64,5]], rare:['jotling',68,68]});
+NODES.n_glacier.adj.push('n_deep');
+
+REGION_REMATCHES('nordhaven', [
+  ['n_pinewick','linnea2','Leader Linnea','Linnea is counting beetles on a single pine needle. “Champion! The forest has been waiting for you. Shall we see how much it has grown?”','“Thousands of small things, and you beat them all.”',[['rimewing',60],['lichenlurk',60],['skaldbird',61],['rimewing',62],['borealynx',63]],['borealynx']],
+  ['n_fjordmere','haakon2','Leader Haakon','Haakon is at the prow, bellowing a sea song. “The champion returns! Out on the deck with you!”','“Sea legs of a giant!”',[['otterhelm',61],['puffinarch',61],['narwhallow',62],['shoalstorm',62],['krakenmaw',64]],['krakenmaw']],
+  ['n_fjordmere','solvi2','Leader Solvi','Solvi skates a perfect figure eight and stops in a spray of ice. “The ice remembers you. Let’s see if you remember the ice.”','“Steady as ever.”',[['martenfang',62],['glaciclaw',62],['frostflame',63],['polarvixen',63],['glacibear',65]],['polarvixen']],
+  ['n_hollow','eirik2','Leader Eirik','Eirik looks up from his whittling. “The dead have been asking after you. They want a rematch. So do I.”','“They still like you. Annoyingly.”',[['hollowcrow',63],['barrowight',63],['driftmare',64],['frostgeist',64],['fenrime',66]],null],
+  ['n_runestad','ragna2','Leader Ragna','For once, Ragna opens her eyes. “I read this battle in the stones a year ago. I would like to know if they were right.”','“The stones were right. I hoped they were not.”',[['skaldbird',64],['aurorelk',64],['selkine',65],['monolord',65],['polarvixen',67]],['polarvixen']],
+  ['n_runestad','torvald2','Leader Torvald','Torvald hands you a shovel. “Dig in, champion. The quarry floor is deeper now.”','“Good footing. Better than mine.”',[['muskhorn',65],['tuskolith',66],['runebreaker',67],['tuskolith',68]],['runebreaker']],
+  ['n_highmark','hilde2','Leader Hilde','Hilde stands on the high table and the whole hall falls silent. “The champion of the north, in my hall again! Fill the horns. Then fight.”','“A seat at my table, forever.”',[['snowhorn',66],['martenfang',66],['gulotooth',67],['muskhorn',67],['glacibear',69]],['glacibear']],
+  ['n_drakenspire','sigurd2','Leader Sigurd','Sigurd waits at the top of the tower with two Voltwyrms coiled around his shoulders. “Every trainer ends here. You ended here once already. Make it twice.”','“Ends here. Again.”',[['skywyrm',67],['voltwyrm',67],['fjorddrake',68],['voltwyrm',68],['fjorddrake',70]],null]
+]);
+
+/* The Midwinter Games: typed cups in Highmark's mead hall */
+CUP({ scene:'midwinter', foe:'games_foe', key:'games', node:'n_highmark', base:60, typed:true, title:'The Midwinter Games', req:g => F(g, 'champion_nordhaven'),
+  pool:['rimewing','snowhorn','fenrime','barrowight','runegolem','driftmare','tuskolith','mosstroll','hollowcrow','voltwyrm','borealynx','puffinarch','narwhallow','aurorelk','glacibear','stormhawk','runebreaker','selkine','shoalstorm','polarvixen','snowstride','frostgeist','skaldbird','lichenlurk','otterhelm','muskhorn','abysslure','martenfang','glaciclaw','frostflame','huskarl','fjorddrake','monolord','krakenmaw','lumisprite','gulotooth','emperice','forgejarl','worldstag','cryolith','jotling','rimeray','hearthwisp','skywyrm'],
+  names:['Shieldmaiden Ragnhild','Skald Eyvind','Berserker Ulf','Ranger Maren','Huntress Sigrun','Skier Kjell','Runecarver Ase','Fisherman Odd','Seer Thyra','Wrestler Bodvar','Sledder Inga','Archer Halvard'],
+  lines:['“The whole hall bet against you. I took their money.”','“I came down from the mountains for this.”','“Midwinter crowns are not given. They are taken.”','“May the best team keep its paws warm.”','“My grandmother won this crown. So will I.”'],
+  foeName:'Midwinter Challenger', outro:'“A good bout. Drink with me after.”', tally:'Midwinter crowns won', trophy:', with your name carved on it in runes',
+  intro:'Every night of midwinter, Highmark’s mead hall clears its long tables for the Midwinter Games, with Hilde herself as judge. “Champion! Each night the games honor one type, and every challenger fights with it. Three bouts, healers between them, and the crown to the last one standing. Win, and tomorrow’s games get harder.”',
+  leave:'Hilde raises her horn to you as you leave. “Tomorrow night, then.”', heal:'Between bouts, Highmark’s healers wrap your partners in warm furs and send them back in.', walk:'stomps into the ring to the drumming of a hundred fists on the tables',
+  cheer:'The mead hall roars, and a hundred fists hammer the tables.', lost:'The hall drums for you anyway. “Tomorrow night,” Hilde calls. “There is always tomorrow night.”' });
+
+/* The frost giant */
+T('vault_guard','Vault Wardens',0,[['runebreaker',67],['monolord',67],['cryolith',68],['jotling',69]],'The runes on the wardens flare white.','The wardens kneel, and their runes go dark.',{ ai:'smart', heals:1, nomoney:true, apex:['runebreaker'] });
+SC('n_giant',{ node:'n_hollow', title:'The oldest song', req:g => F(g, 'champion_nordhaven') && !F(g, 'deep_open'), steps:{
+  start:{ t:'By the barrow field, Ranger Sigrid is waiting beside a woman in plain grey wool. It takes you a moment to recognize her without the white robes: Cantor Ylva.\n\n“The sky is quiet now,” Sigrid says. “The glacier isn’t. It groans every night, louder than the year before. Ylva says she knows why.”\n\nYlva doesn’t quite meet your eyes. “The Choir sang the wrong song. The oldest song of the north isn’t about the sky. It’s about what sleeps under the ice: a giant the first northerners sealed in the glacier’s heart. While the aurora sang, the giant stayed asleep. Now the sky is quiet, and it is waking.”',
+    c:[{ l:'“Then we go down and meet it.”', go:'horn' }, { l:'“Why should I trust you?”', chk:['insight',15], go:'trust', fail:'horn' }] },
+  trust:{ t:'Ylva is quiet for a long moment. “You shouldn’t, maybe. But I know the way down, and I owe the north a song sung right.” You find that you believe her.', next:'horn' },
+  horn:{ t:'Sigrid unwraps a long horn of yellowed ice. “The Giant’s Horn. The rangers have kept it for a thousand years without knowing what it opened. Ylva says it opens the wall at the bottom of Glacier Pass.”', do:g => { giveKey(g, 'giantshorn'); setF(g, 'deep_open'); }, end:true }
+}});
+SC('n_descent',{ node:'n_deep', title:'Into the Frozen Deep', req:g => F(g, 'deep_open') && !F(g, 'vault_found'), steps:{
+  start:{ t:'At the bottom of Glacier Pass you sound the Giant’s Horn. The note goes on far longer than your breath, and the blue wall cracks open. Ylva follows you in with a lantern.', next:'leg1', nl:'Go down' },
+  leg1:{ t:'The tunnel drops into a crevasse spanned by a single bridge of ice, thin as a plank and far older than it looks.',
+    c:[{ l:'Run across before it can crack', chk:['acrobatics',16], go:'leg2', fail:'fall' }, { l:'Test every step', chk:['perception',16], go:'leg2', fail:'fall' }] },
+  fall:{ t:'The bridge gives way. You and your partners land in a snowdrift far below, and something that lives down here comes to see what fell.', c:[{ l:'Fight it off', wild:'node', go:'leg2', fled:'leg2' }] },
+  leg2:{ t:'The cold down here is not like the cold outside. It gets into your bones and starts arguing with your heartbeat.',
+    c:[{ l:'Keep moving and keep your partners close', chk:['survival',16], go:'leg3', fail:'frost' }, { l:'Push through on willpower', chk:['wis',16], go:'leg3', fail:'frost' }] },
+  frost:{ t:'By the time you find shelter, your lead partner is rimed with frost and shivering. You warm it as best you can and go on.', do:g => hurt(g, 30), next:'leg3', nl:'Keep going' },
+  leg3:{ t:'At the bottom a hall opens out: pillars of ice, a long table carved for people four times your size, and a hearth where a single blue flame is still burning. Runes cover every wall.',
+    c:[{ l:'Help Ylva read the runes', chk:['investigation',14], go:'read', fail:'ylva' }, { l:'Let Ylva read them', go:'ylva' }] },
+  read:{ t:'Together you work the runes out. They aren’t a warning. They’re a lullaby: the oldest song of the north, written out for whoever came next to sing.', next:'ylva' },
+  ylva:{ t:'Ylva traces the last line of runes. “Past that door are the wardens the first northerners left to guard the giant. They won’t let us by without a fight.” She sets the lantern down. “I’ll sing while you fight. It’s the least I owe.”', do:g => setF(g, 'vault_found'), end:true }
+}});
+SC('n_vault',{ node:'n_deep', title:'The Giant’s Vault', repeat:true, req:g => F(g, 'vault_found') && !F(g, 'legend_glacitan'), steps:{
+  start:{ t:'The vault door is a single slab of blue ice taller than a longship. Ylva is already singing, very softly.', c:[{ l:'Go in', go:'guard' }, { l:'Come back later', go:'later' }] },
+  later:{ t:'Ylva lets the song trail off. “It has waited a thousand years. It can wait a little longer.”', end:true },
+  guard:{ t:'Inside, four wardens of stone and ice stand around a sleeping shape the size of a hill. As you step forward, their runes flare.', c:[{ l:'Battle the vault wardens', battle:'vault_guard', go:'giant' }] },
+  giant:{ t:'The wardens kneel, and the vault goes quiet. Ylva’s song carries all the way to the far wall, and the hill opens its eyes. Glacitan rises, shedding ice like snow sliding off a roof, and looks down at you.', c:[{ l:'Face Glacitan', wild:['glacitan',72], go:'gone', fled:'flee' }] },
+  flee:{ t:'Glacitan settles back into the ice with a sound like a far-off avalanche. Ylva keeps singing. It will still be here.', end:true },
+  gone:{ t:g => g.lastBattle === 'caught' ? 'The capsule frosts over so thickly you can barely hold it. Glacitan is yours, and far above, for the first time in years, the glacier falls silent.\n\nYlva stops singing and laughs, a little shakily. “That isn’t how the saga ends. I like this one better.”' : 'Glacitan shoulders its way up through the ice and out into the snow. It will come back to its vault to sleep.', do:g => { if (g.lastBattle === 'caught') setF(g, 'legend_glacitan'); }, end:true }
+}});
+MILESTONES.push(
+  ['deep_open','Ranger Sigrid and a reformed Cantor Ylva revealed that a frost giant sleeps under Nordhaven’s glacier, and gave the player the Giant’s Horn to open the Frozen Deep.'],
+  ['vault_found','The player went down into the Frozen Deep with Ylva and found the giants’ hall and the sealed vault.']
 );
 
 for (const n of Object.values(NODES)) n.rg = n.rg || 'halcyon';

@@ -1,7 +1,7 @@
 // Loads the game into a sandbox for the test scripts.
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const dir = process.argv[2] || path.join(__dirname, '..');
-const src = ['data.js','regions.js','game.js'].filter(f => fs.existsSync(path.join(dir, f))).map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
+const src = ['data.js','regions.js','arclight.js','zenith.js','game.js'].filter(f => fs.existsSync(path.join(dir, f))).map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
 const els = { app:{innerHTML:''}, modal:{innerHTML:'',hidden:true,querySelector:()=>null,contains:()=>false}, toast:{} };
 const ctx = { console, Math, JSON, Date, Promise, Set, Map, Object, Array, String, Number, Error, parseInt, isNaN, AbortController,
   document:{ addEventListener(){}, querySelector(s){ return els[s.replace('#','')]||null }, getElementById(id){ return els[id]||null }, activeElement:null },

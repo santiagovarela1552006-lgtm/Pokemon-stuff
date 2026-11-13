@@ -51,13 +51,15 @@ function newGame(o){
   G = { v:1, name:o.name, bg:o.bg, abil:o.abil, diff:o.diff, money:3000, items:{salve:2}, keys:{}, flags:{}, done:{}, beaten:{},
     badges:[], party:[], ranch:[], node:'thistle', lastHaven:'thistle', visited:{thistle:true}, codex:{seen:{}, caught:{}},
     feed:[], insp:0, uidc:0, starter:null, dmLoot:{}, hof:[], scene:null, B:null, pendingLearn:[], pendingEvo:[],
-    settings:{tier:'quick', speed:'normal'}, created:Date.now(), savedAt:0, lastBattle:null, tower:{streak:0, best:0, sets:0, foe:null}, arena:{cups:0, round:1, foe:null}, teams:{}, starters:{} };
+    settings:{tier:'quick', speed:'normal'}, created:Date.now(), savedAt:0, lastBattle:null, tower:{streak:0, best:0, sets:0, foe:null}, arena:{cups:0, round:1, foe:null}, games:{cups:0, round:1, foe:null}, world:{titles:0, round:1, foe:null, used:[]}, teams:{}, starters:{} };
 }
 function migrate(g){
   const base = { items:{}, keys:{}, flags:{}, done:{}, beaten:{}, badges:[], party:[], ranch:[], visited:{}, codex:{seen:{}, caught:{}}, feed:[], insp:0, uidc:0, dmLoot:{}, hof:[], scene:null, B:null, pendingLearn:[], pendingEvo:[], settings:{tier:'quick', speed:'normal'}, lastHaven:'thistle', node:'thistle', money:0 };
   for (const k in base) if (g[k] === undefined) g[k] = base[k];
   if (!g.tower) g.tower = { streak:0, best:0, sets:0, foe:null };
   if (!g.arena) g.arena = { cups:0, round:1, foe:null };
+  if (!g.games) g.games = { cups:0, round:1, foe:null };
+  if (!g.world) g.world = { titles:0, round:1, foe:null, used:[] };
   if (!g.starters) g.starters = {};
   if (!g.teams) {
     // Saves from before fresh starts: whatever team is out belongs to Halcyon. If the save is
@@ -96,7 +98,7 @@ function topLevel(g){ return g.party.reduce((a, m) => Math.max(a, m.lvl), 0); }
 function strongestName(g){ const m = g.party.slice().sort((a, b) => b.lvl - a.lvl)[0]; return m ? mname(m) : 'Your partner'; }
 function pickStarter(g, sp){ g.starter = sp; addMon(makeMon(sp, 5)); }
 function pickRegionStarter(g, region, sp){ g.starters[region] = sp; addMon(makeMon(sp, 5)); }
-function teamRegion(rg){ return rg === 'halcyon' ? 'Thistle Hollow' : rg === 'solenne' ? 'Port Calder' : 'Skerrport'; }
+function teamRegion(rg){ return { halcyon:'Thistle Hollow', solenne:'Port Calder', nordhaven:'Skerrport', arclight:'Grand Central', zenith:'Zenith Harbor' }[rg] || 'Thistle Hollow'; }
 function becomeChampion(g){ setF(g, 'champion'); g.hof.push({ at:Date.now(), region:'halcyon', team:g.party.map(m => ({ sp:m.apexFrom || m.sp, lvl:m.lvl })) }); UI.pendingHof = true; }
 function becomeRegionChampion(g, r){ setF(g, 'champion_' + r); g.hof.push({ at:Date.now(), region:r, team:g.party.map(m => ({ sp:m.apexFrom || m.sp, lvl:m.lvl })) }); UI.pendingHof = true; }
 function badgeRegion(id){ const b = BADGES.find(x => x[0] === id); return (b && b[5]) || 'halcyon'; }
@@ -341,7 +343,41 @@ function commit(){ saveGame(); render(); }
 /* ================= Travel & exploring ================= */
 function canEnter(id){ const n = NODES[id]; return !n.req || n.req(G); }
 function canCoach(id){ const n = NODES[id]; return nb(G) >= 2 && !!G.visited[id] && !!n.haven && id !== G.node && n.rg === NODES[G.node].rg && !NODES[G.node].adj.includes(id) && canEnter(id); }
-function crossWay(a, b){ return (NODES[a].rg === 'nordhaven' || NODES[b].rg === 'nordhaven') ? 'airship' : 'ferry'; }
+const CROSSINGS = {};
+for (const [a, b, w] of [['saltmere','s_port','ferry'], ['s_aurelia','n_port','airship'], ['n_port','a_station','train'], ['a_harbor','w_port','liner']]) CROSSINGS[[a, b].sort().join('|')] = w;
+const WAY_NAME = { ferry:'Ferry', airship:'Airship', train:'Undersea Express', liner:'Champions’ Liner' };
+const WAY_SUB = { ferry:'by ferry', airship:'by airship', train:'by the Undersea Express', liner:'aboard the Champions’ Liner' };
+function crossWay(a, b){ return CROSSINGS[[a, b].sort().join('|')] || 'ferry'; }
+/* Zenith Isle hosts the World Tournament, where every partner from every region may fight.
+   Arriving gathers all regional teams into one; leaving sends each partner back to its home
+   region (new catches go with you). A partner that was in your Zenith party joins the front of
+   its home region's party. */
+const WORLD_REGION = 'zenith';
+function gatherTeams(g, from){
+  const party = [], ranch = [];
+  for (const [r, t] of Object.entries(g.teams)) {
+    t.party.forEach((m, i) => { m.home = r; m.wasParty = i + 1; (r === from ? party : ranch).push(m); });
+    for (const m of t.ranch) { m.home = r; delete m.wasParty; ranch.push(m); }
+  }
+  g.teams = {}; g.party = party; g.ranch = ranch.sort((a, b) => b.lvl - a.lvl);
+}
+function scatterTeams(g, to){
+  const groups = {};
+  const put = (m, inParty) => {
+    const r = m.home || to, t = groups[r] || (groups[r] = { now:[], was:[], rest:[] });
+    (inParty ? t.now : m.wasParty ? t.was : t.rest).push(m);
+  };
+  for (const m of g.party) put(m, true);
+  for (const m of g.ranch) put(m, false);
+  for (const [r, t] of Object.entries(groups)) {
+    // A region's old party keeps its old order, after anyone who just fought in the Zenith party.
+    t.was.sort((a, b) => a.wasParty - b.wasParty);
+    const line = [...t.now, ...t.was];
+    for (const m of [...line, ...t.rest]) { delete m.home; delete m.wasParty; }
+    g.teams[r] = { party:line.slice(0, 6), ranch:[...line.slice(6), ...t.rest] };
+  }
+  g.party = []; g.ranch = [];
+}
 function travel(id){
   if (!G || G.B || G.scene) return;
   const n = NODES[id], adj = NODES[G.node].adj.includes(id), coach = canCoach(id);
@@ -350,14 +386,17 @@ function travel(id){
   const from = NODES[G.node].rg, cross = n.rg !== from, way = cross ? crossWay(G.node, id) : '';
   if (cross) {
     // Each region keeps its own team. Yours waits at the daycare until you come back.
-    G.teams[from] = { party:G.party, ranch:G.ranch };
-    const t = G.teams[n.rg] || { party:[], ranch:[] };
-    G.party = t.party; G.ranch = t.ranch; delete G.teams[n.rg];
+    if (from === WORLD_REGION) scatterTeams(G, n.rg);
+    else G.teams[from] = { party:G.party, ranch:G.ranch };
+    if (n.rg === WORLD_REGION) gatherTeams(G, from);
+    else { const t = G.teams[n.rg] || { party:[], ranch:[] }; G.party = t.party; G.ranch = t.ranch; delete G.teams[n.rg]; }
     if (n.haven) G.lastHaven = id;
   }
   G.node = id; G.visited[id] = true; UI.panel = 'explore';
-  pushFeed({ k:'travel', text:n.n + (cross ? ', ' + REGIONS[n.rg].n : ''), sub: cross ? 'by ' + way : coach ? 'by coach' : '' });
-  if (cross) pushFeed({ k:'sys', text: G.party.length ? `Your ${REGIONS[n.rg].n} team is back with you. Your ${REGIONS[from].n} team waits at the daycare.` : `Your ${REGIONS[from].n} team stays behind at the daycare. In ${REGIONS[n.rg].n}, you start again.` });
+  pushFeed({ k:'travel', text:n.n + (cross ? ', ' + REGIONS[n.rg].n : ''), sub: cross ? WAY_SUB[way] : coach ? 'by coach' : '' });
+  if (cross) pushFeed({ k:'sys', text: n.rg === WORLD_REGION ? 'Every partner you have ever caught has come to Zenith Isle with you. Choose your six from the ranch at any haven on the island.'
+    : from === WORLD_REGION ? `Your partners from every region head home. Your ${REGIONS[n.rg].n} team is back with you.`
+    : G.party.length ? `Your ${REGIONS[n.rg].n} team is back with you. Your ${REGIONS[from].n} team waits at the daycare.` : `Your ${REGIONS[from].n} team stays behind at the daycare. In ${REGIONS[n.rg].n}, you start again.` });
   const auto = Object.values(SCENES).find(S => S.auto && sceneAvail(S));
   if (auto) startScene(auto.id);
   commit();
@@ -1152,7 +1191,7 @@ function viewHeader(){
   return `<header class="bar"><div class="bar-in">
     <span class="brand">Halcyon Road</span>
     <span class="where"><span class="eyebrow">${esc((REGIONS[n.rg] || REGIONS.halcyon).n)}</span>${esc(n.n)}</span>
-    <span class="stats"><span class="stat num">${fmtMoney(G.money)}</span><span class="stat">${rb(G, n.rg)}/8 badges</span><span class="stat insp${G.insp ? ' on' : ''}" title="Inspiration: spend it to reroll a failed check">${G.insp ? 'Inspired' : 'No Inspiration'}</span></span>
+    <span class="stats"><span class="stat num">${fmtMoney(G.money)}</span><span class="stat">${n.rg === WORLD_REGION ? (G.world.titles ? `${G.world.titles} world title${G.world.titles === 1 ? '' : 's'}` : 'World Tournament') : `${rb(G, n.rg)}/8 badges`}</span><span class="stat insp${G.insp ? ' on' : ''}" title="Inspiration: spend it to reroll a failed check">${G.insp ? 'Inspired' : 'No Inspiration'}</span></span>
     <span class="bar-btns"><button class="btn sm" data-a="save" ${G.B ? 'disabled' : ''}>Save</button><button class="btn sm" data-a="menu">Menu</button></span>
   </div></header>`;
 }
@@ -1193,7 +1232,7 @@ function viewExplore(){
   if (n.haven) { svc.push(`<button class="btn act" data-a="rest">${n.haven === 'home' ? 'Rest at home' : n.haven === 'lodge' ? 'Rest at the ranger lodge' : 'Rest at the Haven'}<span class="act-sub">Heal every partner</span></button>`); svc.push(`<button class="btn act" data-a="panel" data-v="ranch">Visit the daycare<span class="act-sub">${G.ranch.length} partner${G.ranch.length === 1 ? '' : 's'} waiting</span></button>`); }
   if (n.shop) svc.push(`<button class="btn act" data-a="panel" data-v="shop">${G.node === 'verdance' ? 'Verdance Department Store' : 'The Outfitter'}<span class="act-sub">Capsules and medicine</span></button>`);
   if (n.dice) svc.push(`<button class="btn act" data-a="panel" data-v="dice">Lucky Lantern dice table<span class="act-sub">Bet on 2d6</span></button>`);
-  const adj = n.adj.map(id => { const m = NODES[id], open = canEnter(id), cross = m.rg !== n.rg; return `<button class="btn act${open ? '' : ' locked'}${cross ? ' story' : ''}" data-a="travel" data-v="${id}">${cross ? `<span class="act-k">${crossWay(G.node, id) === 'airship' ? 'Airship' : 'Ferry'} to ${esc(REGIONS[m.rg].n)}</span>` : ''}${esc(m.n)}<span class="act-sub">${open ? (G.visited[id] ? 'Visited' : 'Not yet visited') : 'Locked'}</span></button>`; }).join('');
+  const adj = n.adj.map(id => { const m = NODES[id], open = canEnter(id), cross = m.rg !== n.rg; return `<button class="btn act${open ? '' : ' locked'}${cross ? ' story' : ''}" data-a="travel" data-v="${id}">${cross ? `<span class="act-k">${WAY_NAME[crossWay(G.node, id)]} to ${esc(REGIONS[m.rg].n)}</span>` : ''}${esc(m.n)}<span class="act-sub">${open ? (G.visited[id] ? 'Visited' : 'Not yet visited') : 'Locked'}</span></button>`; }).join('');
   return `<section class="explore">
     <header class="loc"><p class="eyebrow">${kinds.join(' · ')}</p><h2>${esc(n.n)}</h2><p class="loc-d">${esc(n.d)}</p></header>
     <div class="chron" id="chron" aria-live="polite">${G.feed.slice(-26).map(feedHTML).join('') || '<p class="f-sys">Your story starts here.</p>'}</div>
@@ -1288,7 +1327,7 @@ function viewMap(){
   return `<section class="mapv"><p class="eyebrow">${esc((REGIONS[cur.rg] || REGIONS.halcyon).n)}</p><h2>Where to?</h2>
     <div class="map-wrap">${mapSVG()}</div>
     <p class="fine">Highlighted places are one road away${nb(G) >= 2 ? ', or a coach ride to a town you’ve visited in this region' : ''}. Locked places show what’s stopping you.</p>
-    <div class="grp"><h3>Roads from ${esc(cur.n)}</h3><div class="grp-b">${cur.adj.map(id => { const open = canEnter(id), cross = NODES[id].rg !== cur.rg; return `<button class="btn act${open ? '' : ' locked'}${cross ? ' story' : ''}" data-a="travel" data-v="${id}">${cross ? `<span class="act-k">${crossWay(G.node, id) === 'airship' ? 'Airship' : 'Ferry'} to ${esc(REGIONS[NODES[id].rg].n)}</span>` : ''}${esc(NODES[id].n)}<span class="act-sub">${open ? 'Travel' : esc(NODES[id].lock || 'Locked')}</span></button>`; }).join('')}</div></div>
+    <div class="grp"><h3>Roads from ${esc(cur.n)}</h3><div class="grp-b">${cur.adj.map(id => { const open = canEnter(id), cross = NODES[id].rg !== cur.rg; return `<button class="btn act${open ? '' : ' locked'}${cross ? ' story' : ''}" data-a="travel" data-v="${id}">${cross ? `<span class="act-k">${WAY_NAME[crossWay(G.node, id)]} to ${esc(REGIONS[NODES[id].rg].n)}</span>` : ''}${esc(NODES[id].n)}<span class="act-sub">${open ? 'Travel' : esc(NODES[id].lock || 'Locked')}</span></button>`; }).join('')}</div></div>
     ${coach.length ? `<div class="grp"><h3>Coach</h3><div class="grp-b">${coach.map(id => `<button class="btn act" data-a="travel" data-v="${id}">${esc(NODES[id].n)}<span class="act-sub">Ride the coach</span></button>`).join('')}</div></div>` : ''}
     <button class="btn" data-a="panel" data-v="explore">Close the map</button></section>`;
 }
@@ -1353,13 +1392,15 @@ function viewSheet(){
   const abil = ABIL_ORDER.map(ab => `<div class="abox"><span class="ab">${ab.toUpperCase()}</span><span class="sv">${G.abil[ab]}</span><span class="sm">${sgn(amod(G.abil[ab]))}</span></div>`).join('');
   const skills = Object.keys(SKILLS).map(k => { const i = checkInfo(k); return `<li class="${i.prof ? 'prof' : ''}"><span>${i.prof ? '●' : '○'} ${i.label} <span class="fine">(${SKILLS[k][1].toUpperCase()})</span></span><span class="num">${sgn(i.bonus)}</span></li>`; }).join('');
   const badges = Object.keys(REGIONS).map(r => {
-    if (r !== 'halcyon' && !F(G, r + '_arrived') && rb(G, r) === 0) return '';
+    if (r === WORLD_REGION || (r !== 'halcyon' && !F(G, r + '_arrived') && rb(G, r) === 0)) return '';
     const list = BADGES.filter(b => (b[5] || 'halcyon') === r);
     const champ = r === 'halcyon' ? F(G, 'champion') : F(G, 'champion_' + r);
     return `<h4>${esc(REGIONS[r].n)}${champ ? ' · Champion' : ''}</h4><div class="badges">${list.map(([id, n, leader, town, type]) => `<div class="badge${G.badges.includes(id) ? ' got' : ''}" title="${esc(n)} · ${esc(leader)}, ${esc(town)}"><i style="--bc:${TYPE_COLOR[type]}"></i><span>${esc(n.replace(' Badge', ''))}</span></div>`).join('')}</div>`;
   }).join('');
   const towerLine = (G.tower && (G.tower.sets || G.tower.best) ? `<p class="fine">Summit Tower: best streak ${G.tower.best}, ${G.tower.sets} set${G.tower.sets === 1 ? '' : 's'} cleared.</p>` : '')
-    + (G.arena && G.arena.cups ? `<p class="fine">Aurelia Sun Arena: ${G.arena.cups} cup${G.arena.cups === 1 ? '' : 's'} won.</p>` : '');
+    + (G.arena && G.arena.cups ? `<p class="fine">Aurelia Sun Arena: ${G.arena.cups} cup${G.arena.cups === 1 ? '' : 's'} won.</p>` : '')
+    + (G.games && G.games.cups ? `<p class="fine">Midwinter Games: ${G.games.cups} crown${G.games.cups === 1 ? '' : 's'} won.</p>` : '')
+    + (G.world && G.world.titles ? `<p class="fine">World Tournament: ${G.world.titles} title${G.world.titles === 1 ? '' : 's'}. World Champion.</p>` : '');
   return `<div class="sheet"><div class="sh-head"><b class="sh-name">${esc(G.name)}</b><span class="fine">${esc(bg.n)} · ${esc(DIFFS[G.diff].n)} pace</span><span class="fine">${esc(bg.perk)}</span></div>
     <div class="abil">${abil}</div>
     <p class="fine">Proficiency bonus ${sgn(profBonus())}. It grows with every three badges.</p>
@@ -1400,8 +1441,14 @@ function openEvo(m, into, cb){
 }
 function openHof(){
   const last = G.hof[G.hof.length - 1] || {}, r = last.region || 'halcyon';
-  const next = r === 'halcyon' ? 'The road goes on. The ferry at Port Saltmere now sails south to Solenne, the Summit Tower above the League is open, and something still waits in the Hollow Below.' : r === 'solenne' ? 'An airship now leaves Aurelia for Nordhaven, far to the north.' : 'Three regions, three Halls of Fame. Rematches, the Summit Tower and every Codex entry are still out there.';
-  openModal({ title:'Hall of Fame', html:`<p>${esc(G.name)}, Champion of ${esc(REGIONS[r].n)}.</p><div class="hof">${G.party.map(m => `<div>${sprite(m.apexFrom || m.sp, { cls:'md' })}<b>${esc(mname(m))}</b><span class="fine">Lv ${m.lvl}</span></div>`).join('')}</div><p class="fine">${next}</p>`,
+  const next = {
+    halcyon:'The road goes on. The ferry at Port Saltmere now sails south to Solenne, the Summit Tower above the League is open, and something still waits in the Hollow Below.',
+    solenne:'An airship now leaves Aurelia for Nordhaven, far to the north. Back in Solenne, the gym leaders want rematches and the Sun Arena is open.',
+    nordhaven:'The Undersea Express at Skerrport now runs to Arclight, the city that never sleeps. In Nordhaven, the gym leaders want rematches and Highmark is holding the Midwinter Games.',
+    arclight:'An invitation has arrived: the World Tournament on Zenith Isle, where any partner you have ever caught may fight. The Champions’ Liner sails from Arclight’s Harbor District.',
+    zenith:'The rangers have opened Zenith Caldera to you, and the World Tournament will be waiting, a little tougher each time, whenever you want to defend your title.'
+  }[r];
+  openModal({ title:'Hall of Fame', html:`<p>${esc(G.name)}, ${r === WORLD_REGION ? 'World Champion' : 'Champion of ' + esc(REGIONS[r].n)}.</p><div class="hof">${G.party.map(m => `<div>${sprite(m.apexFrom || m.sp, { cls:'md' })}<b>${esc(mname(m))}</b><span class="fine">Lv ${m.lvl}</span></div>`).join('')}</div><p class="fine">${next}</p>`,
     buttons:[{ label:'Keep playing', primary:true, fn:closeModal }] });
 }
 function openMonInfo(uid){

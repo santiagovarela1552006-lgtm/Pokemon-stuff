@@ -1,8 +1,8 @@
 # Halcyon Road
 
-A single-player creature-trainer RPG played with tabletop dice. Leave Thistle Hollow with your first partner, earn eight gym badges, deal with your rival Corin, break up Team Umbra, and challenge the Summit League. Then sail south, and later fly north, to new regions where you start over with a new partner, like a traveller on a fresh journey. Every risky choice is a d20 skill check, and every battle is decided by attack rolls, Armor Class and damage dice.
+A single-player creature-trainer RPG played with tabletop dice. Leave Thistle Hollow with your first partner, earn eight gym badges, deal with your rival Corin, break up Team Umbra, and challenge the Summit League. Then travel on to three more regions, starting over in each with a new partner, and finally to the World Tournament, where every partner you have ever caught can fight. Every risky choice is a d20 skill check, and every battle is decided by attack rolls, Armor Class and damage dice.
 
-The three regions, their 335 creatures and the whole cast are original. The first region follows the classic shape of a first adventure: a starter from the professor, a rival with the type advantage, a ghost tower, a casino hideout, a corporate tower takeover and a lab-made legend under a lake.
+The five regions, their 406 creatures and the whole cast are original. The first region follows the classic shape of a first adventure: a starter from the professor, a rival with the type advantage, a ghost tower, a casino hideout, a corporate tower takeover and a lab-made legend under a lake.
 
 ## Play it
 
@@ -17,7 +17,7 @@ Progress saves in your browser. Use **Menu → Copy save to clipboard** to back 
 - **Checks:** story choices show the skill and DC up front. Roll d20 + ability modifier + proficiency. A natural 20 grants Inspiration, which buys one reroll.
 - **Battles:** initiative is rolled every round. Attacks roll d20 against the target's AC. Damage dice grow with level, and type matchups, STAB, critical hits on a natural 20 and status saving throws all apply.
 - **Capture:** wear a creature down or put it to sleep, then roll d20 + Capsule bonus + Dexterity against its capture DC.
-- **The Codex:** all 335 creatures can be obtained in one playthrough. Professor Marr rewards milestones, including the two starters you didn't pick.
+- **The Codex:** all 406 creatures can be obtained in one playthrough. Professor Marr rewards milestones, including the two starters you didn't pick.
 - **Pace:** Story, Adventurer or Veteran, chosen when you start.
 
 ## After the Halcyon League
@@ -27,16 +27,19 @@ Progress saves in your browser. Use **Menu → Copy save to clipboard** to back 
 | You become Halcyon's champion | **Summit Tower** above the League (endless five-battle sets with a streak and prizes), **rematches** with all eight gym leaders and the Elite Four, Lisk's **Ashen Lantern** story leading to **Starfall Crater** and the legendary Astraeon, and the **ferry to Solenne** from Port Saltmere |
 | You arrive in Solenne | A sun-baked region of salt flats, vineyards, canyons and an oasis: eight gyms, the Gilded Hand smugglers, the legendary Helioserp and the Sunspire League. Professor Reyne gives you the **Apex Band** |
 | You become Solenne's champion | **Solenne's postgame** (below), and the **airship to Nordhaven** from Aurelia: fjords, pine forests and glaciers, eight more gyms, the Pale Choir, the legendary Aurorath and the Aurora League |
+| You become Nordhaven's champion | **Nordhaven's postgame** (below), and the **Undersea Express to Arclight** from Skerrport: a huge modern city of subways, arcades, foundries and rooftops, eight more gyms, the hacker crew Blackout, the legendary Arcwyrm and the Arclight League |
+| You become Arclight's champion | The **Champions' Liner to Zenith Isle** from Arclight's Harbor District, home of **the World Tournament** (below) |
 
 ### A fresh start in every region
 
-When you reach a new region, your whole team stays behind at the daycare. The local professor (Reyne in Solenne, Ranger Sigrid in Nordhaven) offers three regional starters, and you work up from level 5 again. Corin starts over too, and picks the starter with the type edge. Each region keeps its own team: sail back to Halcyon and your old partners are waiting, while your new team rests at that region's daycare.
+When you reach a new region, your whole team stays behind at the daycare. The local professor (Reyne in Solenne, Ranger Sigrid in Nordhaven, Professor Okoye in Arclight) offers three regional starters, and you work up from level 5 again. Corin starts over too, and picks the starter with the type edge. Each region keeps its own team: sail back to Halcyon and your old partners are waiting, while your new team rests at that region's daycare.
 
 | Region | Starters (Water, Fire, Grass) | Gyms | League |
 | --- | --- | --- | --- |
 | Halcyon | Rippup, Emberkit, Budling | levels 13–49 | about 53–62 |
 | Solenne | Axlet, Scorchick, Aloelet | levels 13–48 | about 55–64 |
 | Nordhaven | Waddlet, Forgling, Birchling | levels 14–49 | about 54–63 |
+| Arclight | Rinseling, Fizzlet, Curbling | levels 12–49 | about 56–65 |
 
 ### Solenne's postgame
 
@@ -44,13 +47,25 @@ When you reach a new region, your whole team stays behind at the daycare. The lo
 - **The Aurelia Sun Arena:** cups of three knockout rounds (quarterfinal, semifinal, final) against random challengers, with healing between rounds. Each cup you win makes the next one tougher.
 - **Two serpents:** Champion Seraphine and Professor Reyne reveal that the old kings sealed a second serpent. Take the Star Compass into **the Glass Desert** east of Duneway, survive three nights of skill checks, rescue a stranded Silas Crane, defeat the Moon Tomb's guardians and face **Selenserp**, the moon twin of Helioserp, at level 70. The desert has five new creatures.
 
+### Nordhaven's postgame
+
+- **Gym rematches:** all eight Nordhaven leaders battle again at levels 60–70, with the same first-win rewards.
+- **The Midwinter Games:** Highmark's mead hall holds three-round cups in which every challenger fights with one type, picked each night (Ice, Water, Ghost, Psychic, Fighting, Normal, Electric or Rock). Each crown you win makes the next one tougher.
+- **The oldest song:** Ranger Sigrid and a reformed Cantor Ylva give you the Giant's Horn. Open **the Frozen Deep** below Glacier Pass, survive the descent, find the giants' hall, defeat the vault wardens and face **Glacitan**, the frost giant, at level 72. The Deep has five new creatures.
+
+### The World Tournament
+
+Zenith Isle is the one place with no fresh start. When you step off the Champions' Liner, every partner you have ever caught, from every region's daycare, comes with you: pick your six at the ranch in any haven on the island. When you leave, each partner goes home to its own region, and anything you caught on Zenith travels with you.
+
+The tournament at the World Stadium is four knockout rounds with healing between them. The first three opponents are drawn from the elites and champions of all four regions, and the final is always Corin, with a team built from every region's starters. A team around level 80 has a good chance at the first title, and each title makes the next tournament two levels tougher. Every title pays two Absolute Capsules, and your first opens **Zenith Caldera**, where the legendary **Zenithar** waits at level 80.
+
 ### Absolute Capsules
 
-An Absolute Capsule never fails. Every Halcyon champion gets a parcel of three from Professor Marr. After that, you earn one each time you clear a Summit Tower set, win a Sun Arena cup, or beat a League again in a rematch.
+An Absolute Capsule never fails. Every Halcyon champion gets a parcel of three from Professor Marr. After that, you earn one each time you clear a Summit Tower set, win a Sun Arena cup or a Midwinter crown, or beat a League again in a rematch, and two for every World Tournament title.
 
 ### Apex Ascension
 
-Once per battle, a fully evolved partner whose Apex Stone you carry can **ascend**: it gains attack, defense and speed, sometimes a new type, and a new look until the battle ends. Twenty-eight partners can ascend, including every starter's final form. Each region's professor gives you the stone for your new starter, and that region's gym leaders give stones for its other creatures. The original twelve Halcyon stones come from your first win in each Halcyon rematch. Some leaders, champions and Corin ascend too.
+Once per battle, a fully evolved partner whose Apex Stone you carry can **ascend**: it gains attack, defense and speed, sometimes a new type, and a new look until the battle ends. Thirty-six partners can ascend, including every starter's final form. Each region's professor gives you the stone for your new starter, and that region's gym leaders give stones for its other creatures. The original twelve Halcyon stones come from your first win in each Halcyon rematch. Some leaders, champions and Corin ascend too.
 
 ### The AI Dungeon Master
 
@@ -62,11 +77,13 @@ The **Free action** box lets you type anything ("ask the fisherman what he's see
 | --- | --- |
 | `index.html` | Page layout and all styles |
 | `data.js` | Halcyon's content: types, moves, creatures, items, map, trainers, story scenes and the postgame |
-| `regions.js` | Solenne and Nordhaven (maps, creatures, gyms, leagues, stories), Solenne's postgame and Sun Arena, and the Apex forms |
-| `game.js` | Rules engine, battle system, Apex Ascension, Summit Tower, sprites (drawn procedurally as SVG), maps and interface |
+| `regions.js` | Solenne and Nordhaven (maps, creatures, gyms, leagues, stories), their postgames and tournament cups, and the Apex forms |
+| `arclight.js` | Arclight, the city region: creatures, map, gyms, Blackout, Arcwyrm and the Arclight League |
+| `zenith.js` | Zenith Isle and the World Tournament |
+| `game.js` | Rules engine, battle system, Apex Ascension, Summit Tower, team pooling for Zenith, sprites (drawn procedurally as SVG), maps and interface |
 | `tools/validate.js` | Checks every cross-reference in the data (scenes, trainers, creatures, moves, map links) |
 | `tools/playtest.js` | A bot plays the Halcyon story six times, then fuzzes random battles and renders every view |
-| `tools/regions-test.js` | A bot plays the postgame, both new regions and their leagues, using Apex Ascension |
+| `tools/regions-test.js` | A bot plays every postgame, the three later regions and their leagues, and the World Tournament, using Apex Ascension |
 | `tools/serve.js` | A tiny local web server: `node tools/serve.js` then open http://127.0.0.1:8765 |
 
 Run the checks with Node:
