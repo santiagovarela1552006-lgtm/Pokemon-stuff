@@ -985,7 +985,7 @@ SC('leaguerematch',{node:'league', title:'Rematch the Summit League', repeat:tru
   e3:{t:'MORWEN. The table is set for two this time. “Sit. Eat. Lose.”', c:[{l:'Battle Elite Morwen', battle:'r_morwen', go:'e4', rematch:true}]},
   e4:{t:'DRAVEN. The wind is worse. “The dragons asked for this.”', c:[{l:'Battle Elite Draven', battle:'r_draven', go:'champ', rematch:true}]},
   champ:{t:'Corin is sitting in the champion’s chair again, which is technically your chair. “Title defense,” they say, grinning. “My turn to chase you.”', c:[{l:'Battle Champion Corin', battle:'r_champion', go:'hof', rematch:true}]},
-  hof:{t:'Corin laughs and shakes your hand. “Okay. Again sometime?” Your name goes up on the Hall of Fame wall a second time, beside the first.', do:g=>{ g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 3; becomeChampion(g); }, end:true}
+  hof:{t:g=>'Corin laughs and shakes your hand. “Okay. Again sometime?” Your name goes up on the Hall of Fame wall a second time, beside the first.' + (F(g,'rm_league') ? '' : '\n\nProfessor Marr is waiting at the bottom of the stairs with four Apex Stones, for Galecrest, Brawlape, Solvixen and Tidalrus. “Found them in a drawer at the lab. I think they were always meant for you.”'), do:g=>{ g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 3; if (!F(g,'rm_league')) { setF(g,'rm_league'); for (const s of ['galecrest','brawlape','solvixen','tidalrus']) g.keys['apexstone_' + s] = true; } becomeChampion(g); }, end:true}
 }});
 
 const REMATCHES = [
@@ -998,9 +998,10 @@ const REMATCHES = [
   ['cinderisle','blaise2','Leader Blaise','Blaise slaps his goggles down. “The CHAMPION! In MY volcano! HA!”'],
   ['greenspire','vane5','Leader Vane','Vane is back on the dais, jacket folded on the rail. Leading a gym is the one thing he kept. “Again, then.”']
 ];
+const REMATCH_STONE = { dorrin2:'bouldrock', maris2:'tyrantide', voss2:'voltail', liora2:'elderthorn', sable2:'gloomreaper', seren2:'cerebrix', blaise2:'blazehound', vane5:'sandreaver' };
 for (const [node, tid, name, intro] of REMATCHES) SC('rematch_' + tid, {node, title:'Rematch: ' + name, gym:true, repeat:true, req:g=>F(g,'champion'), steps:{
   start:{t:intro, c:[{l:'Battle ' + name, battle:tid, rematch:true, soft:true, go:'won', lose:'lost'},{l:'Not today', go:'leave'}]},
-  won:{t:g=>TRAINERS[tid].outro + (F(g,'rm_' + tid) ? '' : ' Your first rematch win here earns you two Wisdom Fruits.'), do:g=>{ if (!F(g,'rm_' + tid)) { setF(g,'rm_' + tid); g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 2; } }, end:true},
+  won:{t:g=>TRAINERS[tid].outro + (F(g,'rm_' + tid) ? '' : ` Your first rematch win here earns you two Wisdom Fruits and an Apex Stone for ${SPECIES[REMATCH_STONE[tid]].n}. You’ll need an Apex Band to use it.`), do:g=>{ if (!F(g,'rm_' + tid)) { setF(g,'rm_' + tid); g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 2; g.keys['apexstone_' + REMATCH_STONE[tid]] = true; } }, end:true},
   lost:{t:'“Come back when you’re ready. I’ll be here.”', end:true},
   leave:{t:'Another time.', end:true}
 }});

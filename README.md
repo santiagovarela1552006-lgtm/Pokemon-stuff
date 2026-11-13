@@ -1,8 +1,8 @@
 # Halcyon Road
 
-A single-player creature-trainer RPG played with tabletop dice. Leave Thistle Hollow with your first partner, earn eight gym badges, deal with your rival Corin, break up Team Umbra, and challenge the Summit League. Then sail south, and later fly north, to new regions with their own gyms and leagues. Every risky choice is a d20 skill check, and every battle is decided by attack rolls, Armor Class and damage dice.
+A single-player creature-trainer RPG played with tabletop dice. Leave Thistle Hollow with your first partner, earn eight gym badges, deal with your rival Corin, break up Team Umbra, and challenge the Summit League. Then sail south, and later fly north, to new regions where you start over with a new partner, like a traveller on a fresh journey. Every risky choice is a d20 skill check, and every battle is decided by attack rolls, Armor Class and damage dice.
 
-The three regions, their 191 creatures and the whole cast are original. The first region follows the classic shape of a first adventure: a starter from the professor, a rival with the type advantage, a ghost tower, a casino hideout, a corporate tower takeover and a lab-made legend under a lake.
+The three regions, their 329 creatures and the whole cast are original. The first region follows the classic shape of a first adventure: a starter from the professor, a rival with the type advantage, a ghost tower, a casino hideout, a corporate tower takeover and a lab-made legend under a lake.
 
 ## Play it
 
@@ -17,7 +17,7 @@ Progress saves in your browser. Use **Menu → Copy save to clipboard** to back 
 - **Checks:** story choices show the skill and DC up front. Roll d20 + ability modifier + proficiency. A natural 20 grants Inspiration, which buys one reroll.
 - **Battles:** initiative is rolled every round. Attacks roll d20 against the target's AC. Damage dice grow with level, and type matchups, STAB, critical hits on a natural 20 and status saving throws all apply.
 - **Capture:** wear a creature down or put it to sleep, then roll d20 + Capsule bonus + Dexterity against its capture DC.
-- **The Codex:** all 191 creatures can be obtained in one playthrough. Professor Marr rewards milestones, including the two starters you didn't pick.
+- **The Codex:** all 329 creatures can be obtained in one playthrough. Professor Marr rewards milestones, including the two starters you didn't pick.
 - **Pace:** Story, Adventurer or Veteran, chosen when you start.
 
 ## After the Halcyon League
@@ -28,9 +28,19 @@ Progress saves in your browser. Use **Menu → Copy save to clipboard** to back 
 | You arrive in Solenne | A sun-baked region of salt flats, vineyards, canyons and an oasis: eight gyms, the Gilded Hand smugglers, the legendary Helioserp and the Sunspire League. Professor Reyne gives you the **Apex Band** |
 | You become Solenne's champion | The **airship to Nordhaven** from Aurelia: fjords, pine forests and glaciers, eight more gyms, the Pale Choir, the legendary Aurorath and the Aurora League |
 
+### A fresh start in every region
+
+When you reach a new region, your whole team stays behind at the daycare. The local professor (Reyne in Solenne, Ranger Sigrid in Nordhaven) offers three regional starters, and you work up from level 5 again. Corin starts over too, and picks the starter with the type edge. Each region keeps its own team: sail back to Halcyon and your old partners are waiting, while your new team rests at that region's daycare.
+
+| Region | Starters (Water, Fire, Grass) | Gyms | League |
+| --- | --- | --- | --- |
+| Halcyon | Rippup, Emberkit, Budling | levels 13–49 | about 53–62 |
+| Solenne | Axlet, Scorchick, Aloelet | levels 13–48 | about 55–64 |
+| Nordhaven | Waddlet, Forgling, Birchling | levels 14–49 | about 54–63 |
+
 ### Apex Ascension
 
-Once per battle, a fully evolved partner whose Apex Stone you carry can **ascend**: it gains attack, defense and speed, sometimes a new type, and a new look until the battle ends. Twelve partners can ascend, including all three starters' final forms. You get your starter's stone from Professor Reyne, and the rest from gym leaders in Solenne and Nordhaven. Some leaders, champions and Corin ascend too.
+Once per battle, a fully evolved partner whose Apex Stone you carry can **ascend**: it gains attack, defense and speed, sometimes a new type, and a new look until the battle ends. Twenty-eight partners can ascend, including every starter's final form. Each region's professor gives you the stone for your new starter, and that region's gym leaders give stones for its other creatures. The original twelve Halcyon stones come from your first win in each Halcyon rematch. Some leaders, champions and Corin ascend too.
 
 ### The AI Dungeon Master
 

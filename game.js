@@ -51,12 +51,23 @@ function newGame(o){
   G = { v:1, name:o.name, bg:o.bg, abil:o.abil, diff:o.diff, money:3000, items:{salve:2}, keys:{}, flags:{}, done:{}, beaten:{},
     badges:[], party:[], ranch:[], node:'thistle', lastHaven:'thistle', visited:{thistle:true}, codex:{seen:{}, caught:{}},
     feed:[], insp:0, uidc:0, starter:null, dmLoot:{}, hof:[], scene:null, B:null, pendingLearn:[], pendingEvo:[],
-    settings:{tier:'quick', speed:'normal'}, created:Date.now(), savedAt:0, lastBattle:null, tower:{streak:0, best:0, sets:0, foe:null} };
+    settings:{tier:'quick', speed:'normal'}, created:Date.now(), savedAt:0, lastBattle:null, tower:{streak:0, best:0, sets:0, foe:null}, teams:{}, starters:{} };
 }
 function migrate(g){
   const base = { items:{}, keys:{}, flags:{}, done:{}, beaten:{}, badges:[], party:[], ranch:[], visited:{}, codex:{seen:{}, caught:{}}, feed:[], insp:0, uidc:0, dmLoot:{}, hof:[], scene:null, B:null, pendingLearn:[], pendingEvo:[], settings:{tier:'quick', speed:'normal'}, lastHaven:'thistle', node:'thistle', money:0 };
   for (const k in base) if (g[k] === undefined) g[k] = base[k];
   if (!g.tower) g.tower = { streak:0, best:0, sets:0, foe:null };
+  if (!g.starters) g.starters = {};
+  if (!g.teams) {
+    // Saves from before fresh starts: whatever team is out belongs to Halcyon. If the save is
+    // already in another region, that team goes home to the daycare and the arrival scene replays.
+    g.teams = {};
+    const rg = NODES[g.node] && NODES[g.node].rg;
+    if (rg && rg !== 'halcyon') {
+      g.teams.halcyon = { party:g.party, ranch:g.ranch }; g.party = []; g.ranch = [];
+      delete g.done[rg === 'solenne' ? 's_arrive' : 'n_arrive'];
+    }
+  }
   if (!g.B) for (const m of [...g.party, ...g.ranch]) if (m.apexFrom) { m.sp = m.apexFrom; delete m.apexFrom; }
   if (!g.settings.speed) g.settings.speed = 'normal';
   if (!NODES[g.node]) g.node = 'thistle';
@@ -79,6 +90,8 @@ function gift(g, sp, lvl){ const m = makeMon(sp, lvl); const where = addMon(m); 
 function topLevel(g){ return g.party.reduce((a, m) => Math.max(a, m.lvl), 0); }
 function strongestName(g){ const m = g.party.slice().sort((a, b) => b.lvl - a.lvl)[0]; return m ? mname(m) : 'Your partner'; }
 function pickStarter(g, sp){ g.starter = sp; addMon(makeMon(sp, 5)); }
+function pickRegionStarter(g, region, sp){ g.starters[region] = sp; addMon(makeMon(sp, 5)); }
+function teamRegion(rg){ return rg === 'halcyon' ? 'Thistle Hollow' : rg === 'solenne' ? 'Port Calder' : 'Skerrport'; }
 function becomeChampion(g){ setF(g, 'champion'); g.hof.push({ at:Date.now(), region:'halcyon', team:g.party.map(m => ({ sp:m.apexFrom || m.sp, lvl:m.lvl })) }); UI.pendingHof = true; }
 function becomeRegionChampion(g, r){ setF(g, 'champion_' + r); g.hof.push({ at:Date.now(), region:r, team:g.party.map(m => ({ sp:m.apexFrom || m.sp, lvl:m.lvl })) }); UI.pendingHof = true; }
 function badgeRegion(id){ const b = BADGES.find(x => x[0] === id); return (b && b[5]) || 'halcyon'; }
@@ -111,7 +124,8 @@ function towerSetClear(g){
 }
 function towerLost(g){ const s = g.tower.streak; g.tower.streak = 0; return `Your streak ends at ${s}. The attendant patches up your partners and bows. “The tower will be here.”`; }
 const CODEX_REWARDS = [[10, [['supercapsule',5]]], [25, [['hypercapsule',5],['wisdomfruit',2]]], [40, [], 'starter'], [60, [['maxsalve',3],['wisdomfruit',3]]], [80, [], 'starter'],
-  [100, [['hypercapsule',10]], 'lumin'], [150, [['absolute',1],['wisdomfruit',5]]], [CODEX_IDS.length, [['maxsalve',5],['revive',5]]]];
+  [100, [['hypercapsule',10]], 'lumin'], [150, [['absolute',1],['wisdomfruit',5]]], [200, [['maxsalve',5],['wisdomfruit',5]]], [250, [['absolute',1],['hypercapsule',10]]],
+  [CODEX_IDS.length, [['maxsalve',5],['revive',5]]]];
 function caughtCount(g){ return CODEX_IDS.filter(id => g.codex.caught[id]).length; }
 function seenCount(g){ return CODEX_IDS.filter(id => g.codex.seen[id]).length; }
 function codexTalk(g){
@@ -273,6 +287,7 @@ function choose(i){
   const sc = G.scene; if (!sc || sc.pending || sc.ended) return;
   const st = SCENES[sc.id].steps[sc.step];
   const ch = choicesOf(st)[i]; if (!ch) return;
+  if ((ch.battle || ch.wild) && !G.party.some(m => m.hp > 0)) { toast('You have no partners with you who can battle.'); return; }
   sc.trail.push({ choice:ch.l });
   if (ch.do) ch.do(G);
   if (ch.chk) {
@@ -329,9 +344,17 @@ function travel(id){
   const n = NODES[id], adj = NODES[G.node].adj.includes(id), coach = canCoach(id);
   if (!adj && !coach) return;
   if (!canEnter(id)) { toast(n.lock || 'You can’t go there yet.'); return; }
-  const cross = n.rg !== NODES[G.node].rg, way = cross ? crossWay(G.node, id) : '';
+  const from = NODES[G.node].rg, cross = n.rg !== from, way = cross ? crossWay(G.node, id) : '';
+  if (cross) {
+    // Each region keeps its own team. Yours waits at the daycare until you come back.
+    G.teams[from] = { party:G.party, ranch:G.ranch };
+    const t = G.teams[n.rg] || { party:[], ranch:[] };
+    G.party = t.party; G.ranch = t.ranch; delete G.teams[n.rg];
+    if (n.haven) G.lastHaven = id;
+  }
   G.node = id; G.visited[id] = true; UI.panel = 'explore';
   pushFeed({ k:'travel', text:n.n + (cross ? ', ' + REGIONS[n.rg].n : ''), sub: cross ? 'by ' + way : coach ? 'by coach' : '' });
+  if (cross) pushFeed({ k:'sys', text: G.party.length ? `Your ${REGIONS[n.rg].n} team is back with you. Your ${REGIONS[from].n} team waits at the daycare.` : `Your ${REGIONS[from].n} team stays behind at the daycare. In ${REGIONS[n.rg].n}, you start again.` });
   const auto = Object.values(SCENES).find(S => S.auto && sceneAvail(S));
   if (auto) startScene(auto.id);
   commit();
@@ -406,9 +429,13 @@ const actF = () => G.B.foe[G.B.fi];
 function snap(){ const B = G.B, p = G.party[B.pi], f = B.foe[B.fi]; return { pu:p.uid, ph:p.hp, pst:p.st, fu:f.uid, fh:f.hp, fst:f.st }; }
 function qf(text, cls, dice, hit){ G.B.queue.push({ text, cls:cls || '', dice:dice || null, hit:hit || null, snap:snap() }); }
 function nameOf(side, m){ if (side === 'p') return mname(m); return (G.B.kind === 'wild' ? (G.B.legendary ? '' : 'Wild ') : 'Foe ') + SPECIES[m.sp].n; }
+function rivalLine(T){
+  if (T && T.rline) { const lines = REGION_RIVAL[T.rline]; return lines[G.starters && G.starters[T.rline]] || Object.values(lines)[0]; }
+  return RIVAL_LINE[G.starter] || RIVAL_LINE.emberkit;
+}
 function trainerTeam(id){
   const T = TRAINERS[id];
-  const line = RIVAL_LINE[G.starter] || RIVAL_LINE.emberkit;
+  const line = rivalLine(T);
   const team = T.rival ? RIVAL_TEAMS[id].map(([s, l]) => [typeof s === 'number' ? line[s] : s, l]) : T.team;
   return team.map(([s, l]) => makeMon(s, Math.max(2, Math.round(l * DIFF().lvl)), true));
 }
@@ -601,7 +628,7 @@ function ascend(side){
 function foeMaybeAscend(){
   const B = G.B; if (!B.trainer || B.foeApexUsed) return;
   const T = TRAINERS[B.trainer]; if (!T.apex) return;
-  const want = T.apex.map(a => a === 'starter' ? (RIVAL_LINE[G.starter] || RIVAL_LINE.emberkit)[2] : a);
+  const want = T.apex.map(a => a === 'starter' ? rivalLine(T)[2] : a);
   const F0 = actF(); if (want.includes(F0.sp) && apexFor(F0)) ascend('f');
 }
 function foeDecide(){
@@ -1159,7 +1186,7 @@ function viewExplore(){
   const scenes = Object.values(SCENES).filter(sceneAvail);
   const tr = (n.trainers || []).filter(id => !G.beaten[id]);
   const svc = [];
-  if (n.haven) { svc.push(`<button class="btn act" data-a="rest">${n.haven === 'home' ? 'Rest at home' : n.haven === 'lodge' ? 'Rest at the ranger lodge' : 'Rest at the Haven'}<span class="act-sub">Heal every partner</span></button>`); svc.push(`<button class="btn act" data-a="panel" data-v="ranch">Visit the ranch<span class="act-sub">${G.ranch.length} partner${G.ranch.length === 1 ? '' : 's'} waiting</span></button>`); }
+  if (n.haven) { svc.push(`<button class="btn act" data-a="rest">${n.haven === 'home' ? 'Rest at home' : n.haven === 'lodge' ? 'Rest at the ranger lodge' : 'Rest at the Haven'}<span class="act-sub">Heal every partner</span></button>`); svc.push(`<button class="btn act" data-a="panel" data-v="ranch">Visit the daycare<span class="act-sub">${G.ranch.length} partner${G.ranch.length === 1 ? '' : 's'} waiting</span></button>`); }
   if (n.shop) svc.push(`<button class="btn act" data-a="panel" data-v="shop">${G.node === 'verdance' ? 'Verdance Department Store' : 'The Outfitter'}<span class="act-sub">Capsules and medicine</span></button>`);
   if (n.dice) svc.push(`<button class="btn act" data-a="panel" data-v="dice">Lucky Lantern dice table<span class="act-sub">Bet on 2d6</span></button>`);
   const adj = n.adj.map(id => { const m = NODES[id], open = canEnter(id), cross = m.rg !== n.rg; return `<button class="btn act${open ? '' : ' locked'}${cross ? ' story' : ''}" data-a="travel" data-v="${id}">${cross ? `<span class="act-k">${crossWay(G.node, id) === 'airship' ? 'Airship' : 'Ferry'} to ${esc(REGIONS[m.rg].n)}</span>` : ''}${esc(m.n)}<span class="act-sub">${open ? (G.visited[id] ? 'Visited' : 'Not yet visited') : 'Locked'}</span></button>`; }).join('');
@@ -1270,7 +1297,8 @@ function viewShop(){
 }
 function monRow(m, btns){ return `<div class="mrow">${sprite(m.sp, { cls:'sm' })}<div class="mrow-main"><b>${esc(mname(m))}</b> <span class="fine">Lv ${m.lvl}</span><div class="pl-types">${SPECIES[m.sp].t.map(typeChip).join('')}</div></div>${btns}</div>`; }
 function viewRanch(){
-  return `<section class="ranch"><p class="eyebrow">${esc(NODES[G.node].n)}</p><h2>The ranch</h2><p class="fine">Partners at the ranch are safe and fed. Your party holds up to six.</p>
+  const away = Object.entries(G.teams || {}).filter(([, t]) => t.party.length + t.ranch.length).map(([r, t]) => `Your ${REGIONS[r].n} team (${t.party.length + t.ranch.length} partner${t.party.length + t.ranch.length === 1 ? '' : 's'}) is waiting at the ${esc(teamRegion(r))} daycare. You’ll have them back when you return to ${REGIONS[r].n}.`);
+  return `<section class="ranch"><p class="eyebrow">${esc(NODES[G.node].n)}</p><h2>The daycare</h2><p class="fine">Partners at the daycare are safe and fed. Your party holds up to six.</p>${away.map(a => `<p class="fine">${a}</p>`).join('')}
     <div class="two"><div><h3>Party (${G.party.length}/6)</h3>${G.party.map(m => monRow(m, `<button class="btn sm" data-a="deposit" data-v="${m.uid}" ${G.party.length <= 1 ? 'disabled' : ''}>Send to ranch</button>`)).join('')}</div>
     <div><h3>At the ranch (${G.ranch.length})</h3>${G.ranch.map(m => monRow(m, `<button class="btn sm" data-a="withdraw" data-v="${m.uid}" ${G.party.length >= 6 ? 'disabled' : ''}>Add to party</button>`)).join('') || '<p class="fine">Nobody here yet.</p>'}</div></div>
     <button class="btn" data-a="panel" data-v="explore">Leave</button></section>`;
@@ -1435,7 +1463,7 @@ const ACTIONS = {
   accept(){ acceptFailure(); },
   closescene(){ closeScene(); },
   explore(){ explore(); },
-  trainer(v){ if (!G.B && !G.scene && !G.beaten[v]) { startTrainer(v, null); commit(); } },
+  trainer(v){ if (!G.party.length) return toast('You have no partners with you yet.'); if (!G.B && !G.scene && !G.beaten[v]) { startTrainer(v, null); commit(); } },
   rest(){ rest(); },
   panel(v){ UI.panel = v; render(); },
   travel(v){ travel(v); },

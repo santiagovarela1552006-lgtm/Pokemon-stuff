@@ -1,6 +1,7 @@
 // Usage: node tools/regions-test.js
-// Plays the postgame, Solenne and Nordhaven through the real engine, using Apex Ascension whenever it can.
-const { run, els } = require('./harness.js');
+// Plays the postgame, then starts fresh in Solenne and Nordhaven, checking the daycare swap,
+// regional starters, Apex Ascension and both leagues through the real engine.
+const { run } = require('./harness.js');
 const out = run(`(function(){
   const log = []; let ascents = 0, foeAscents = 0, battles = 0;
   function fight(){
@@ -49,45 +50,56 @@ const out = run(`(function(){
   for (const b of BADGES.filter(b => !b[5])) G.badges.push(b[0]);
   setF(G, 'champion'); setF(G, 'revived'); setF(G, 'vane_final');
   G.items.hypersalve = 60; G.items.hypercapsule = 40; G.items.revive = 20; G.money = 100000;
-  const starterFinal = STARTER_FINAL[G.starter];
-  team([starterFinal, 'galecrest', 'brawlape', 'cerebrix', 'tyrantide', 'sandreaver'], 82);
+  team([STARTER_FINAL[G.starter], 'galecrest', 'brawlape', 'cerebrix', 'tyrantide', 'sandreaver'], 82);
+  const halcyonUids = G.party.map(m => m.uid).join(',');
 
   // Halcyon postgame
-  log.push('rematch_dorrin2: ' + play('rematch_dorrin2'));
-  log.push('leaguerematch: ' + play('leaguerematch'));
+  log.push('rematch_dorrin2: ' + play('rematch_dorrin2') + ', Bouldrock stone: ' + !!G.keys.apexstone_bouldrock);
+  log.push('leaguerematch: ' + play('leaguerematch') + ', four stones: ' + ['galecrest','brawlape','solvixen','tidalrus'].every(s => G.keys['apexstone_' + s]));
   for (let i = 0; i < 3; i++) play('tower');
-  log.push('tower: streak ' + G.tower.streak + ', best ' + G.tower.best + ', sets ' + G.tower.sets);
-  log.push('ashen1: ' + play('ashen1') + ' / ashen2: ' + play('ashen2') + ' / crater open: ' + canEnter('crater'));
-  log.push('ashen3: ' + play('ashen3') + ' / astraeon: ' + play('astraeon') + ' caught=' + !!G.codex.caught.astraeon);
+  log.push('tower: best ' + G.tower.best + ', sets ' + G.tower.sets);
+  log.push('ashen arc: ' + play('ashen1') + ' / ' + play('ashen2') + ' / ' + play('ashen3') + ' / astraeon caught=' + (play('astraeon'), !!G.codex.caught.astraeon));
 
-  // Solenne
-  G.node = 'saltmere'; G.scene = null; G.lastHaven = 'saltmere';
+  // Solenne: fresh start
+  G.node = 'saltmere'; G.scene = null;
   travel('s_port');
-  log.push('arrived Solenne: ' + (G.node === 's_port') + ', auto scene: ' + (G.scene && G.scene.id));
-  if (G.scene) { while (G.scene && !G.scene.ended) choose(0); closeScene(); }
-  log.push('apex band: ' + !!G.keys.apexband + ', starter stone: ' + !!G.keys['apexstone_' + starterFinal]);
-  for (const id of ['gym_vintage','gym_mesa','gym_gauntlet','s_hand1','gym_oasis','gym_essence','s_hand2','s_legend','gym_updraft','gym_thunderhead','gym_solar']) log.push(id + ': ' + play(id));
-  log.push('Solenne badges: ' + rb(G, 'solenne') + ', steps open: ' + canEnter('s_steps'));
-  team([starterFinal, 'galecrest', 'brawlape', 'cerebrix', 'tyrantide', 'sandreaver'], 90);
+  log.push('Solenne: party after ferry ' + G.party.length + ', Halcyon team at daycare ' + (G.teams.halcyon && G.teams.halcyon.party.length) + ', auto scene ' + (G.scene && G.scene.id) + ', lastHaven ' + G.lastHaven);
+  log.push('s_arrive: ' + play('s_arrive') + ', starter ' + G.starters.solenne + ' Lv' + (G.party[0] && G.party[0].lvl) + ', band ' + !!G.keys.apexband + ', starter stone ' + !!G.keys['apexstone_' + REGION_FINAL[G.starters.solenne]]);
+  G.node = 's_port'; travel('saltmere');
+  log.push('sailed home: Halcyon team restored ' + (G.party.map(m => m.uid).join(',') === halcyonUids) + ', Solenne team waiting ' + (G.teams.solenne && G.teams.solenne.party.length));
+  G.node = 'saltmere'; travel('s_port');
+  log.push('back in Solenne with ' + G.party.map(m => SPECIES[m.sp].n).join(','));
+  const sTeam = [REGION_FINAL[G.starters.solenne], 'sunmane', 'terraknight', 'sphinxara', 'stormkite', 'dromedune'];
+  team(sTeam, 30);
+  for (const id of ['gym_vintage','gym_mesa','gym_gauntlet','s_hand1','gym_oasis','s_rival1']) log.push(id + ': ' + play(id));
+  team(sTeam, 50);
+  for (const id of ['gym_essence','s_hand2','s_legend','gym_updraft','gym_thunderhead','gym_solar']) log.push(id + ': ' + play(id));
+  team(sTeam, 60);
   log.push('s_rival: ' + play('s_rival') + ' / league: ' + play('league_solenne') + ' / champion_solenne: ' + F(G, 'champion_solenne'));
 
-  // Nordhaven
+  // Nordhaven: fresh start again
   G.node = 's_aurelia'; G.scene = null;
   travel('n_port');
-  log.push('arrived Nordhaven: ' + (G.node === 'n_port'));
-  if (G.scene) { while (G.scene && !G.scene.ended) choose(0); closeScene(); }
-  team([starterFinal, 'galecrest', 'brawlape', 'cerebrix', 'tyrantide', 'sandreaver'], 99);
-  for (const id of ['gym_pinecone','gym_longship','gym_rime','gym_barrow','n_choir1','n_choir2','n_legend','gym_rune','gym_bedrock','gym_hearth','gym_dragonscale']) log.push(id + ': ' + play(id));
-  team([starterFinal, 'galecrest', 'brawlape', 'cerebrix', 'tyrantide', 'sandreaver'], 100);
+  log.push('Nordhaven: party after airship ' + G.party.length + ', Solenne team at daycare ' + (G.teams.solenne && G.teams.solenne.party.length));
+  log.push('n_arrive: ' + play('n_arrive') + ', starter ' + G.starters.nordhaven + ', stone ' + !!G.keys['apexstone_' + REGION_FINAL[G.starters.nordhaven]]);
+  const nTeam = [REGION_FINAL[G.starters.nordhaven], 'glacibear', 'polarvixen', 'krakenmaw', 'runebreaker', 'borealynx'];
+  team(nTeam, 32);
+  for (const id of ['gym_pinecone','gym_longship','gym_rime','gym_barrow','n_choir1','n_rival1']) log.push(id + ': ' + play(id));
+  team(nTeam, 52);
+  for (const id of ['n_choir2','n_legend','gym_rune','gym_bedrock','gym_hearth','gym_dragonscale']) log.push(id + ': ' + play(id));
+  team(nTeam, 62);
   log.push('n_rival: ' + play('n_rival') + ' / league: ' + play('league_nordhaven') + ' / champion_nordhaven: ' + F(G, 'champion_nordhaven'));
-  log.push('apex stones: ' + Object.keys(G.keys).filter(k => k.startsWith('apexstone_')).length + '/12');
+  log.push('apex stones: ' + Object.keys(G.keys).filter(k => k.startsWith('apexstone_')).length + '/' + Object.keys(APEX).length);
   log.push('party reverted after battles: ' + G.party.every(m => !m.apexFrom && !SPECIES[m.sp].apexOf));
   log.push('battles ' + battles + ', player ascents ' + ascents + ', foe ascents ' + foeAscents);
 
-  // Views in each region
-  for (const n of ['s_port','n_port','tower','crater']) { G.node = n; G.scene = null; G.B = null; UI.panel = 'map'; render(); UI.panel = 'explore'; render(); }
+  for (const n of ['s_port','n_port','tower','crater']) { G.node = n; G.scene = null; G.B = null; UI.panel = 'map'; render(); UI.panel = 'explore'; render(); UI.panel = 'ranch'; render(); }
   UI.tab = 'sheet'; render(); UI.tab = 'codex'; render(); openHof(); closeModal();
+
+  // Old-save migration: a save already standing in Solenne with its Halcyon team
+  const old = JSON.parse(JSON.stringify(G)); delete old.teams; delete old.starters; old.node = 's_mirrow'; old.done.s_arrive = true;
+  const mg = migrate(old);
+  log.push('migration: party ' + mg.party.length + ', Halcyon team saved ' + !!(mg.teams.halcyon && mg.teams.halcyon.party.length) + ', arrival scene replayable ' + !mg.done.s_arrive);
   return log.join('\\n');
 })()`);
 console.log(out);
-console.log('map html has Nordhaven:', els.app.innerHTML.length > 0);
