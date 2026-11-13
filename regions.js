@@ -465,7 +465,7 @@ function LEAGUE(o){
   steps.champ = { t:o.champ.text, c:[{ l:'Battle ' + o.champ.name, battle:o.champ.id, go:'hof', rematch:true }] };
   steps.hof = { t:o.hof, do:g => becomeRegionChampion(g, o.region), end:true };
   SC('league_' + o.region, { node:o.node, title:o.title, repeat:true, req:g => !F(g, 'champion_' + o.region), steps });
-  SC('league_' + o.region + '_rematch', { node:o.node, title:o.title + ' again', repeat:true, req:g => F(g, 'champion_' + o.region), steps:Object.assign({}, steps, { hof:{ t:'Your name goes up on the wall of champions a second time.', do:g => { g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 3; becomeRegionChampion(g, o.region); }, end:true } }) });
+  SC('league_' + o.region + '_rematch', { node:o.node, title:o.title + ' again', repeat:true, req:g => F(g, 'champion_' + o.region), steps:Object.assign({}, steps, { hof:{ t:'Your name goes up on the wall of champions again. The League adds three Wisdom Fruits and an Absolute Capsule to your bag.', do:g => { g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 3; g.items.absolute = (g.items.absolute || 0) + 1; becomeRegionChampion(g, o.region); }, end:true } }) });
 }
 LEAGUE({ region:'solenne', node:'s_league', title:'Challenge the Sunspire League', heals:2,
   intro:'The Sunspire League’s doors are beaten gold. Behind them wait four elites and Solenne’s champion. There is no rest between them.',
@@ -586,4 +586,110 @@ MILESTONES.push(
   ['choir_beaten','The player defeated Cantor Ylva of the Pale Choir on Aurora Peak.'],
   ['champion_nordhaven','The player is Champion of Nordhaven.']
 );
+/* ---------------- Solenne postgame ---------------- */
+S('glassling','Glassling',['rock'],[54,60,82,54],13,100,[60,'prismaw'],'round',['gem','spikes'],'A shard of desert glass that rolls toward moonlight.');
+S('prismaw','Prismaw',['rock','psychic'],[92,108,124,72],17,240,null,'quad',['gem','spikes','crest'],'Bends moonlight through its glass body into beams that can cut stone.');
+S('gloamscarab','Gloamscarab',['bug','ghost'],[88,108,96,96],17,240,null,'insect',['antennae','shell','eyesbig'],'Rolls a ball of moonlight across the Glass Desert: the night twin of the sun scarab.');
+S('moonfen','Moonfen',['psychic','ghost'],[86,104,82,118],18,245,null,'quad',['ears','tail','eyes3'],'A pale fennec that walks out of mirages and back into them. Lost caravans follow it home.');
+S('astralasp','Astralasp',['poison','psychic'],[90,112,84,106],17,240,null,'serpent',['spots','crest'],'Its scales map the night sky. Navigators once read the stars off its back.');
+S('selenserp','Selenserp',['ghost','psychic'],[112,126,104,104],26,340,null,'serpent',['horns','crest','aura','spots'],'The moon serpent of Solenne, sealed beside its sun twin. When it wakes, the desert nights fill with wandering lights.',{legend:true, ex:{1:'recover'}});
+KEYS.starcompass = ['Star Compass', 'Professor Reyne’s brass compass. Its needle follows the brightest star, not the north.'];
+
+SN('s_glass',{n:'The Glass Desert', k:'route', x:362, y:150, tier:6, adj:['s_duneway'], lp:[-9, 3.2, 'end'],
+  req:g=>F(g,'glass_open'), lock:'Nobody crosses the deep desert east of Duneway without a guide, or at least a very good compass.',
+  d:'Whole dunes melted smooth and frozen in waves, ringing faintly underfoot. By day it is an oven. By night it fills with lights that walk.',
+  enc:[['glassling',60,63,14],['prismaw',62,65,5],['gloamscarab',60,64,8],['moonfen',62,66,5],['astralasp',62,66,5],['duneskorp',60,64,8],['whirldust',60,64,8],['dromedune',60,64,8],['heliskink',60,64,6],['tombwrap',60,64,6]], rare:['moonfen',68,68]});
+NODES.s_duneway.adj.push('s_glass');
+
+/* Gym leader rematches */
+const REMATCH_S = [
+  ['s_vinara','ines2','Leader Ines','Ines is tasting this year’s vintage. “The champion! Stay for a glass, and a battle. The vines have grown since you left.”','“Deeper roots than ever.”',[['vinocerus',60],['vintoxin',60],['palmquill',61],['sunbloom',61],['aloeking',63]],['aloeking']],
+  ['s_mesa','tomas2','Leader Tomas','Tomas is free-climbing the wall without a rope. He drops the last twenty feet and lands beside you. “Champion! Up for the hard route?”','“Still solid as the mesa.”',[['gecklord',61],['plateaurtle',61],['crestram',62],['sentrilith',62],['sphinxara',64]],['sphinxara']],
+  ['s_mesa','brigid2','Leader Brigid','Brigid tosses you a pair of gloves. “Again. Harder.”','“Good hands. Better than mine, today.”',[['vinocerus',62],['crestram',62],['clayguard',63],['terraknight',65]],['terraknight']],
+  ['s_mirrow','sefa2','Leader Sefa','Sefa surfaces in the middle of the oasis and waves. “Champion! The water missed you!”','“You flow like you were born here.”',[['lilyhopper',63],['pearlord',63],['brinegator',64],['shimmeray',64],['axoltide',66]],['axoltide']],
+  ['s_mirrow','nadir2','Leader Nadir','Nadir uncorks a new perfume. “I made this one for you. It smells like defeat.”','“The right dose, again. Infuriating.”',[['tarmaw',64],['vintoxin',64],['astralasp',65],['pyrocobra',67]],null],
+  ['s_cliff','aria2','Leader Aria','Aria is standing on the highest bridge in a gale, grinning. “Come up! The wind’s perfect!”','“You flew higher.”',[['canyonswift',65],['duneplume',65],['brinewader',66],['solfalcon',67],['stormkite',68]],['stormkite']],
+  ['s_cliff','kade2','Leader Kade','Kade has put up three new lightning rods. “Bigger storm, champion! Let’s see you stand in it!”','“What a JOLT!”',[['djinnspark',66],['heliskink',66],['stormkite',67],['heliskink',69]],['stormkite']],
+  ['s_aurelia','calix2','Leader Calix','Calix bows from the altar fire. “The sun rises again. Shall we see whom it favors today?”','“The sun approves. Again.”',[['sunbloom',67],['solfalcon',67],['pyrocobra',68],['solscarab',68],['sunmane',70]],['sunmane']]
+];
+for (const [node, tid, name, intro, outro, team, apex] of REMATCH_S) {
+  T(tid, name, 110, team, '', outro, { ai:'smart', heals:2, apex });
+  SC('rematch_' + tid, { node, title:'Rematch: ' + name, gym:true, repeat:true, req:g => F(g, 'champion_solenne'), steps:{
+    start:{ t:intro, c:[{ l:'Battle ' + name, battle:tid, rematch:true, soft:true, go:'won', lose:'lost' }, { l:'Not today', go:'leave' }] },
+    won:{ t:g => outro + (F(g, 'rm_' + tid) ? '' : ' Your first rematch win here earns you two Wisdom Fruits and a Max Salve.'), do:g => { if (!F(g, 'rm_' + tid)) { setF(g, 'rm_' + tid); g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 2; g.items.maxsalve = (g.items.maxsalve || 0) + 1; } }, end:true },
+    lost:{ t:'“Come back when you’re ready. I’ll be here.”', end:true },
+    leave:{ t:'Another time.', end:true }
+  }});
+}
+
+/* The Aurelia Sun Arena: three-round cups against random challengers */
+const SOLENNE_POOL = ['duneskorp','vinocerus','sunbloom','miragefen','brinewader','crestram','whirldust','heliskink','tombwrap','solscarab','dromedune','vintoxin','gecklord','sphinxara','tumbleroot','shimmeray','terraknight','palmquill','stormkite','sentrilith','brinegator','ibisage','pyrocobra','djinnspark','vinebeetle','canyonswift','sunmane','tarmaw','amphorite','jackalith','pearlord','plateaurtle','lilyhopper','pricklemaw','duneplume','axoltide','solfalcon','aloeking','prismaw','gloamscarab','moonfen','astralasp'];
+const ARENA_NAMES = ['Gladiator Rufio','Caravan Master Omari','Ace Trainer Delphine','Sandrunner Kaya','Duelist Amara','Veteran Bastian','Sun Priest Tahir','Glassblower Petra','Dune Racer Zara','Falconer Hamid','Oasis Warden Noor','Ace Trainer Leon'];
+const ARENA_LINES = ['“The crowd came to see you lose. Let’s not disappoint them.”','“I’ve trained in this arena since I could walk.”','“Champion or not, the sand doesn’t care.”','“Let’s give them a show.”','“I crossed the whole desert for this match.”'];
+const ARENA_ROUNDS = ['quarterfinal','semifinal','final'];
+function ensureArenaFoe(g){
+  const f = (g.arena && g.arena.foe) || { name:'Arena Challenger', team:[['sunmane',60]], intro:'' };
+  Object.assign(TRAINERS.arena_foe, { name:f.name, team:f.team, intro:f.intro });
+}
+function ordinal(n){ const t = n % 100; return n + (t > 10 && t < 14 ? 'th' : ['th','st','nd','rd'][n % 10] || 'th'); }
+function arenaRound(g, n){
+  if (n > 1) healParty();
+  g.arena.round = n;
+  const lvl = Math.min(80, 60 + 2 * g.arena.cups) + (n - 1) * 2, pool = SOLENNE_POOL.slice(), team = [];
+  for (let i = 0; i < 4; i++) team.push([pool.splice(rnd(pool.length), 1)[0], Math.min(100, lvl + rnd(2))]);
+  g.arena.foe = { name:pick(ARENA_NAMES), team, intro:pick(ARENA_LINES) };
+  ensureArenaFoe(g);
+  return (n > 1 ? 'The arena healers patch up your team between rounds.\n\n' : '') + `The ${ARENA_ROUNDS[n - 1]}. ${g.arena.foe.name} walks out to the roar of the crowd with four partners around level ${lvl}.`;
+}
+function arenaWon(g){
+  g.arena.cups++;
+  const cash = 4000 + 500 * g.arena.cups;
+  g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 3; g.items.maxsalve = (g.items.maxsalve || 0) + 2; g.items.absolute = (g.items.absolute || 0) + 1; g.money += cash;
+  return `The crowd is on its feet. You win your ${g.arena.cups === 1 ? 'first' : ordinal(g.arena.cups)} Sun Cup. Prize: 3 Wisdom Fruits, 2 Max Salves, ${fmtMoney(cash)} and an Absolute Capsule, polished like a trophy. The next cup will be tougher.`;
+}
+T('arena_foe','Arena Challenger',80,[['sunmane',60]],'','“What a match!”',{ ai:'smart', heals:1, dyn:ensureArenaFoe });
+SC('sunarena',{ node:'s_aurelia', title:'The Sun Arena cup', repeat:true, req:g => F(g, 'champion_solenne'), steps:{
+  start:{ t:g => `Behind the sun temple, the Aurelia Sun Arena rises in tiers of gold sandstone, packed with a roaring crowd. The arena master, a woman with a voice like a brass horn, waves you in. “A champion! Every cup is three rounds, knockout, with healers between rounds. Win and the next cup gets tougher.”\n\nSun Cups won: ${g.arena.cups}.`, c:[{ l:'Enter the cup', go:'r1' }, { l:'Not today', go:'leave' }] },
+  leave:{ t:'The arena master waves you back out into the bazaar.', end:true },
+  r1:{ t:g => arenaRound(g, 1), c:[{ l:'Battle', battle:'arena_foe', rematch:true, soft:true, lose:'lost', go:'r2' }] },
+  r2:{ t:g => arenaRound(g, 2), c:[{ l:'Battle', battle:'arena_foe', rematch:true, soft:true, lose:'lost', go:'r3' }] },
+  r3:{ t:g => arenaRound(g, 3), c:[{ l:'Battle', battle:'arena_foe', rematch:true, soft:true, lose:'lost', go:'won' }] },
+  won:{ t:g => arenaWon(g), end:true },
+  lost:{ t:g => `Knocked out in the ${ARENA_ROUNDS[(g.arena.round || 1) - 1]}. The crowd cheers you off anyway. “Come back for the next cup,” the arena master booms.`, end:true }
+}});
+
+/* The moon serpent */
+T('tomb_guard','Tomb Guardians',0,[['sentrilith',66],['amphorite',66],['jackalith',67],['sphinxara',68]],'The guardians’ eyes open.','The guardians go still.',{ ai:'smart', heals:1, nomoney:true, apex:['sphinxara'] });
+SC('sp_seraphine',{ node:'s_aurelia', title:'Two serpents', req:g => F(g, 'champion_solenne') && !F(g, 'glass_open'), steps:{
+  start:{ t:'In the sun temple, Champion Seraphine is waiting beside Professor Reyne, both of them unusually serious.\n\n“Since Helioserp woke, the desert nights have gone wrong,” Seraphine says. “Lights that walk. Caravans that leave Duneway and never arrive anywhere.”\n\nReyne unrolls a rubbing of an inscription. “The second half of the kings’ seal. They didn’t bury one serpent. They buried two: sun and moon. The moon tomb is out in the Glass Desert, east of Duneway, where the sand melted the day the sun serpent was sealed.”',
+    c:[{ l:'“I’ll go.”', go:'compass' }, { l:'Ask what happened to Silas Crane', go:'silas' }] },
+  silas:{ t:'“Crane?” Seraphine’s mouth tightens. “He hired a crew in Mirrowell a week ago and headed east. Nobody has seen him since.”', next:'compass' },
+  compass:{ t:'Reyne presses a brass compass into your hand. Its needle doesn’t point north. It swings, slowly, toward the brightest star. “The Star Compass. It will get you across the glass if you trust it. Mostly.”', do:g => { giveKey(g, 'starcompass'); setF(g, 'glass_open'); }, end:true }
+}});
+SC('sp_trek',{ node:'s_glass', title:'Three nights on the glass', req:g => F(g, 'glass_open') && !F(g, 'tomb_found'), steps:{
+  start:{ t:'East of Duneway the sand gives way to glass. You set out at dusk with the Star Compass in your hand and your partners close.', next:'leg1', nl:'Walk into the first night' },
+  leg1:{ t:'The first night. The stars wheel overhead, and a line of pale lights crosses the glass ahead of you, moving like a caravan.',
+    c:[{ l:'Follow the Star Compass and ignore the lights', chk:['survival',16], go:'leg2', fail:'lost1' }, { l:'Follow the lights', chk:['insight',16], go:'leg2', fail:'lost1' }] },
+  lost1:{ t:'The lights were a mirage. By the time you realize it, you are hours off course, and something out on the glass has noticed you.', c:[{ l:'Fight it off', wild:'node', go:'leg2', fled:'leg2' }] },
+  leg2:{ t:'The second night. A glass ridge blocks the way, too steep and too smooth to climb, and the wind sings across its edge.',
+    c:[{ l:'Climb it carefully', chk:['athletics',16], go:'leg3', fail:'slide' }, { l:'Search along its base for a pass', chk:['perception',16], go:'leg3', fail:'slide' }] },
+  slide:{ t:'You slide back down the glass in a rush of sand. Your lead partner breaks your fall and takes the scrapes. You go around the long way.', do:g => hurt(g, 25), next:'leg3', nl:'Keep walking' },
+  leg3:{ t:'The third night. In the hollow between two glass dunes, a figure lies half buried in sand: a tall man in a gold-trimmed coat, very sunburnt. Silas Crane.\n\n“Champion,” he croaks. “Of course it’s you.”',
+    c:[{ l:'Give him water and a salve', go:'help' }, { l:'“Where’s your crew?”', chk:['insight',14], go:'crew', fail:'help' }] },
+  crew:{ t:'“Gone. Took the camels the first night the lights came.” He laughs, weakly. “I came out here to sell the moon. Now I’d settle for seeing the morning.”', next:'help' },
+  help:{ t:'You get Crane on his feet and into the shade of a glass overhang. When he can talk again, he points east, toward a single black spire on the horizon.\n\n“The Moon Tomb. The kings sealed the moon serpent there, beside its sun twin. The door only opens at midnight.” He looks at you. “I won’t follow you in. I think I’m done with tombs.”', do:g => setF(g, 'tomb_found'), end:true }
+}});
+SC('sp_tomb',{ node:'s_glass', title:'The Moon Tomb', repeat:true, req:g => F(g, 'tomb_found') && !F(g, 'legend_selenserp'), steps:{
+  start:{ t:'At midnight the black spire’s door slides open on its own. Inside, a spiral stair runs down into the glass, lit by moonlight that has no business being underground.', c:[{ l:'Go down', go:'guard' }, { l:'Come back another night', go:'later' }] },
+  later:{ t:'The door slides shut behind you. It will open again at midnight.', end:true },
+  guard:{ t:'At the bottom, four stone guardians stand around a sealed silver disc: the moon twin of the sun-disc in the Sunstone Ruins. As you step forward, their eyes open.', c:[{ l:'Battle the tomb guardians', battle:'tomb_guard', go:'seal' }] },
+  seal:{ t:'The guardians settle back onto their plinths, eyes dark. The silver disc cracks, and cold light pours out of it like water. Something long and pale uncoils from the light: Selenserp.', c:[{ l:'Face Selenserp', wild:['selenserp',70], go:'gone', fled:'flee' }] },
+  flee:{ t:'Selenserp coils back into the cold light behind the disc. The tomb will open again at midnight.', end:true },
+  gone:{ t:g => g.lastBattle === 'caught' ? 'The capsule goes cold as ice and stays that way. Selenserp is yours. If you have Helioserp, its capsule is suddenly warm in your bag, as if answering.' : 'Selenserp rises through the spire and spreads across the night sky like a second river of stars. It will return to the tomb by morning.', do:g => { if (g.lastBattle === 'caught') setF(g, 'legend_selenserp'); }, end:true }
+}});
+MILESTONES.push(
+  ['glass_open','Champion Seraphine and Professor Reyne revealed that the old kings sealed a second, moon serpent in the Glass Desert east of Duneway.'],
+  ['tomb_found','The player crossed the Glass Desert, rescued a stranded Silas Crane, and found the Moon Tomb.']
+);
+
 for (const n of Object.values(NODES)) n.rg = n.rg || 'halcyon';

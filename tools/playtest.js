@@ -52,7 +52,7 @@ function playScene(id){
     choose(good.length ? pick(good) : 0);
   }
   if (g>=200) throw new Error('scene loop '+id);
-  return G.done[id] ? 'done' : 'kept';
+  return G.done[id] || (S.repeat && !sceneAvail(S)) ? 'done' : 'kept';
 }
 `, ctx);
 const run = code => vm.runInContext(code, ctx);
@@ -75,7 +75,7 @@ for (let trial = 0; trial < 6; trial++) {
       while (res === 'kept' && tries < 25 && !['warden','profcodex','league'].includes(id));
       if (id === 'league') { let t = 0; while (!run(`F(G,'champion')`) && t++ < 15) { run(`boost(${lvl + t})`); run(`playScene('league')`); } }
       if (id === 'intro') run(`G.party.push(makeMon('gnawrat',5)); G.party.push(makeMon('dusklet',5)); G.party.push(makeMon('scrapup',5));`);
-      if (res === 'unavailable' && !['returnfruit','warden','fossil','compass'].includes(id)) failures.push(`trial ${trial}: ${id} unavailable`);
+      if (res === 'unavailable' && !['returnfruit','warden','fossil','museum2','compass'].includes(id)) failures.push(`trial ${trial}: ${id} unavailable`);
     }
     run(`for (const nid of Object.keys(NODES)) { const n=NODES[nid]; if (!n.enc) continue; G.node=nid; G.scene=null; for (let k=0;k<4;k++){ healParty(); explore(); if (G.B) botBattle(true); } }`);
     const s = run(`JSON.stringify({champ:F(G,'champion'), badges:G.badges.length, done:Object.keys(G.done).length, party:G.party.map(m=>m.sp+':'+m.lvl).join(' '), ranch:G.ranch.length, codex:caughtCount(G), money:G.money, nyx:F(G,'legend_nyxion'), lumin:F(G,'legend_lumin'), museum:F(G,'museum_gift'), starters:Object.keys(G.flags).filter(k=>k.startsWith('starter_')).join('+'), codexr:Object.keys(G.flags).filter(k=>k.startsWith('codexr')).length, keys:Object.keys(G.keys).join(',')})`);

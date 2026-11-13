@@ -38,7 +38,7 @@ const out = run(`(function(){
       }
       G.node = SCENES[id].node;
       if (G.done[id] || (SCENES[id].repeat && !sceneAvail(SCENES[id]))) return 'done' + (t ? ' after ' + (t + 1) + ' tries' : '');
-      if (SCENES[id].repeat && /^(tower|leaguerematch|rematch_|league_.*_rematch)/.test(id)) return 'played';
+      if (SCENES[id].repeat && /^(tower|leaguerematch|rematch_|league_.*_rematch|sunarena)/.test(id)) return 'played';
       G.items.hypersalve = Math.max(G.items.hypersalve || 0, 30); G.items.revive = Math.max(G.items.revive || 0, 10);
     }
     return 'kept after ' + tries + ' tries';
@@ -55,9 +55,11 @@ const out = run(`(function(){
 
   // Halcyon postgame
   log.push('rematch_dorrin2: ' + play('rematch_dorrin2') + ', Bouldrock stone: ' + !!G.keys.apexstone_bouldrock);
-  log.push('leaguerematch: ' + play('leaguerematch') + ', four stones: ' + ['galecrest','brawlape','solvixen','tidalrus'].every(s => G.keys['apexstone_' + s]));
+  const absL = G.items.absolute || 0;
+  log.push('leaguerematch: ' + play('leaguerematch') + ', Absolute Capsule ' + ((G.items.absolute || 0) - absL) + ', four stones: ' + ['galecrest','brawlape','solvixen','tidalrus'].every(s => G.keys['apexstone_' + s]));
+  const absT = G.items.absolute || 0;
   for (let i = 0; i < 3; i++) play('tower');
-  log.push('tower: best ' + G.tower.best + ', sets ' + G.tower.sets);
+  log.push('tower: best ' + G.tower.best + ', sets ' + G.tower.sets + ', Absolute Capsules won ' + ((G.items.absolute || 0) - absT));
   log.push('ashen arc: ' + play('ashen1') + ' / ' + play('ashen2') + ' / ' + play('ashen3') + ' / astraeon caught=' + (play('astraeon'), !!G.codex.caught.astraeon));
 
   // Solenne: fresh start
@@ -76,6 +78,20 @@ const out = run(`(function(){
   for (const id of ['gym_essence','s_hand2','s_legend','gym_updraft','gym_thunderhead','gym_solar']) log.push(id + ': ' + play(id));
   team(sTeam, 60);
   log.push('s_rival: ' + play('s_rival') + ' / league: ' + play('league_solenne') + ' / champion_solenne: ' + F(G, 'champion_solenne'));
+
+  // Solenne postgame
+  team(sTeam, 68);
+  log.push('sp_seraphine: ' + play('sp_seraphine') + ', compass ' + !!G.keys.starcompass + ', desert open ' + F(G, 'glass_open') + ', s_glass reachable ' + NODES.s_duneway.adj.includes('s_glass'));
+  log.push('sp_trek: ' + play('sp_trek') + ', tomb found ' + F(G, 'tomb_found'));
+  log.push('sp_tomb: ' + play('sp_tomb') + ', Selenserp caught ' + !!G.codex.caught.selenserp);
+  for (const t of ['ines2','nadir2','calix2']) { const f0 = G.items.wisdomfruit || 0; log.push('rematch_' + t + ': ' + play('rematch_' + t) + ', first-win reward ' + F(G, 'rm_' + t) + ' (+' + ((G.items.wisdomfruit || 0) - f0) + ' fruit)'); }
+  let arenaTries = 0, rounds = []; const absA = G.items.absolute || 0;
+  while (G.arena.cups < 3 && arenaTries < 12) { arenaTries++; play('sunarena'); rounds.push(G.arena.round + (G.arena.cups ? '' : '')); }
+  log.push('sunarena: ' + G.arena.cups + ' cups in ' + arenaTries + ' entries, last foe ' + G.arena.foe.name + ' ' + G.arena.foe.team.map(x => x[0] + ' ' + x[1]).join('/') + ', Absolute Capsules won ' + ((G.items.absolute || 0) - absA));
+  const absR = G.items.absolute || 0;
+  log.push('league_solenne_rematch: ' + play('league_solenne_rematch') + ', Absolute Capsule ' + ((G.items.absolute || 0) - absR));
+  const tab0 = UI.tab; G.node = 's_glass'; G.scene = null; UI.panel = 'map'; render(); UI.panel = 'explore'; render(); UI.tab = 'sheet'; render();
+  log.push('sheet shows arena: ' + /Sun Arena: [0-9]+ cup/.test(viewSheet()));
 
   // Nordhaven: fresh start again
   G.node = 's_aurelia'; G.scene = null;
@@ -97,9 +113,9 @@ const out = run(`(function(){
   UI.tab = 'sheet'; render(); UI.tab = 'codex'; render(); openHof(); closeModal();
 
   // Old-save migration: a save already standing in Solenne with its Halcyon team
-  const old = JSON.parse(JSON.stringify(G)); delete old.teams; delete old.starters; old.node = 's_mirrow'; old.done.s_arrive = true;
-  const mg = migrate(old);
-  log.push('migration: party ' + mg.party.length + ', Halcyon team saved ' + !!(mg.teams.halcyon && mg.teams.halcyon.party.length) + ', arrival scene replayable ' + !mg.done.s_arrive);
+  const old = JSON.parse(JSON.stringify(G)); delete old.teams; delete old.starters; delete old.arena; old.node = 's_mirrow'; old.done.s_arrive = true;
+  const abs0 = old.items.absolute || 0; const mg = migrate(old); const abs1 = mg.items.absolute; migrate(mg);
+  log.push('migration: party ' + mg.party.length + ', Halcyon team saved ' + !!(mg.teams.halcyon && mg.teams.halcyon.party.length) + ', arrival scene replayable ' + !mg.done.s_arrive + ', arena defaults ' + JSON.stringify(mg.arena) + ', champion parcel +' + (abs1 - abs0) + ' then +' + (mg.items.absolute - abs1));
   return log.join('\\n');
 })()`);
 console.log(out);

@@ -2,7 +2,7 @@
 
 A single-player creature-trainer RPG played with tabletop dice. Leave Thistle Hollow with your first partner, earn eight gym badges, deal with your rival Corin, break up Team Umbra, and challenge the Summit League. Then sail south, and later fly north, to new regions where you start over with a new partner, like a traveller on a fresh journey. Every risky choice is a d20 skill check, and every battle is decided by attack rolls, Armor Class and damage dice.
 
-The three regions, their 329 creatures and the whole cast are original. The first region follows the classic shape of a first adventure: a starter from the professor, a rival with the type advantage, a ghost tower, a casino hideout, a corporate tower takeover and a lab-made legend under a lake.
+The three regions, their 335 creatures and the whole cast are original. The first region follows the classic shape of a first adventure: a starter from the professor, a rival with the type advantage, a ghost tower, a casino hideout, a corporate tower takeover and a lab-made legend under a lake.
 
 ## Play it
 
@@ -17,7 +17,7 @@ Progress saves in your browser. Use **Menu → Copy save to clipboard** to back 
 - **Checks:** story choices show the skill and DC up front. Roll d20 + ability modifier + proficiency. A natural 20 grants Inspiration, which buys one reroll.
 - **Battles:** initiative is rolled every round. Attacks roll d20 against the target's AC. Damage dice grow with level, and type matchups, STAB, critical hits on a natural 20 and status saving throws all apply.
 - **Capture:** wear a creature down or put it to sleep, then roll d20 + Capsule bonus + Dexterity against its capture DC.
-- **The Codex:** all 329 creatures can be obtained in one playthrough. Professor Marr rewards milestones, including the two starters you didn't pick.
+- **The Codex:** all 335 creatures can be obtained in one playthrough. Professor Marr rewards milestones, including the two starters you didn't pick.
 - **Pace:** Story, Adventurer or Veteran, chosen when you start.
 
 ## After the Halcyon League
@@ -26,7 +26,7 @@ Progress saves in your browser. Use **Menu → Copy save to clipboard** to back 
 | --- | --- |
 | You become Halcyon's champion | **Summit Tower** above the League (endless five-battle sets with a streak and prizes), **rematches** with all eight gym leaders and the Elite Four, Lisk's **Ashen Lantern** story leading to **Starfall Crater** and the legendary Astraeon, and the **ferry to Solenne** from Port Saltmere |
 | You arrive in Solenne | A sun-baked region of salt flats, vineyards, canyons and an oasis: eight gyms, the Gilded Hand smugglers, the legendary Helioserp and the Sunspire League. Professor Reyne gives you the **Apex Band** |
-| You become Solenne's champion | The **airship to Nordhaven** from Aurelia: fjords, pine forests and glaciers, eight more gyms, the Pale Choir, the legendary Aurorath and the Aurora League |
+| You become Solenne's champion | **Solenne's postgame** (below), and the **airship to Nordhaven** from Aurelia: fjords, pine forests and glaciers, eight more gyms, the Pale Choir, the legendary Aurorath and the Aurora League |
 
 ### A fresh start in every region
 
@@ -37,6 +37,16 @@ When you reach a new region, your whole team stays behind at the daycare. The lo
 | Halcyon | Rippup, Emberkit, Budling | levels 13–49 | about 53–62 |
 | Solenne | Axlet, Scorchick, Aloelet | levels 13–48 | about 55–64 |
 | Nordhaven | Waddlet, Forgling, Birchling | levels 14–49 | about 54–63 |
+
+### Solenne's postgame
+
+- **Gym rematches:** all eight Solenne leaders battle again at levels 60–70, and several ascend. Your first win against each pays two Wisdom Fruits and a Max Salve.
+- **The Aurelia Sun Arena:** cups of three knockout rounds (quarterfinal, semifinal, final) against random challengers, with healing between rounds. Each cup you win makes the next one tougher.
+- **Two serpents:** Champion Seraphine and Professor Reyne reveal that the old kings sealed a second serpent. Take the Star Compass into **the Glass Desert** east of Duneway, survive three nights of skill checks, rescue a stranded Silas Crane, defeat the Moon Tomb's guardians and face **Selenserp**, the moon twin of Helioserp, at level 70. The desert has five new creatures.
+
+### Absolute Capsules
+
+An Absolute Capsule never fails. Every Halcyon champion gets a parcel of three from Professor Marr. After that, you earn one each time you clear a Summit Tower set, win a Sun Arena cup, or beat a League again in a rematch.
 
 ### Apex Ascension
 
@@ -52,7 +62,7 @@ The **Free action** box lets you type anything ("ask the fisherman what he's see
 | --- | --- |
 | `index.html` | Page layout and all styles |
 | `data.js` | Halcyon's content: types, moves, creatures, items, map, trainers, story scenes and the postgame |
-| `regions.js` | Solenne and Nordhaven (maps, creatures, gyms, leagues, stories) and the Apex forms |
+| `regions.js` | Solenne and Nordhaven (maps, creatures, gyms, leagues, stories), Solenne's postgame and Sun Arena, and the Apex forms |
 | `game.js` | Rules engine, battle system, Apex Ascension, Summit Tower, sprites (drawn procedurally as SVG), maps and interface |
 | `tools/validate.js` | Checks every cross-reference in the data (scenes, trainers, creatures, moves, map links) |
 | `tools/playtest.js` | A bot plays the Halcyon story six times, then fuzzes random battles and renders every view |

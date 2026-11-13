@@ -51,12 +51,13 @@ function newGame(o){
   G = { v:1, name:o.name, bg:o.bg, abil:o.abil, diff:o.diff, money:3000, items:{salve:2}, keys:{}, flags:{}, done:{}, beaten:{},
     badges:[], party:[], ranch:[], node:'thistle', lastHaven:'thistle', visited:{thistle:true}, codex:{seen:{}, caught:{}},
     feed:[], insp:0, uidc:0, starter:null, dmLoot:{}, hof:[], scene:null, B:null, pendingLearn:[], pendingEvo:[],
-    settings:{tier:'quick', speed:'normal'}, created:Date.now(), savedAt:0, lastBattle:null, tower:{streak:0, best:0, sets:0, foe:null}, teams:{}, starters:{} };
+    settings:{tier:'quick', speed:'normal'}, created:Date.now(), savedAt:0, lastBattle:null, tower:{streak:0, best:0, sets:0, foe:null}, arena:{cups:0, round:1, foe:null}, teams:{}, starters:{} };
 }
 function migrate(g){
   const base = { items:{}, keys:{}, flags:{}, done:{}, beaten:{}, badges:[], party:[], ranch:[], visited:{}, codex:{seen:{}, caught:{}}, feed:[], insp:0, uidc:0, dmLoot:{}, hof:[], scene:null, B:null, pendingLearn:[], pendingEvo:[], settings:{tier:'quick', speed:'normal'}, lastHaven:'thistle', node:'thistle', money:0 };
   for (const k in base) if (g[k] === undefined) g[k] = base[k];
   if (!g.tower) g.tower = { streak:0, best:0, sets:0, foe:null };
+  if (!g.arena) g.arena = { cups:0, round:1, foe:null };
   if (!g.starters) g.starters = {};
   if (!g.teams) {
     // Saves from before fresh starts: whatever team is out belongs to Halcyon. If the save is
@@ -71,6 +72,10 @@ function migrate(g){
   if (!g.B) for (const m of [...g.party, ...g.ranch]) if (m.apexFrom) { m.sp = m.apexFrom; delete m.apexFrom; }
   if (!g.settings.speed) g.settings.speed = 'normal';
   if (!NODES[g.node]) g.node = 'thistle';
+  if (g.flags.champion && !g.flags.gift_absolute3) {
+    g.flags.gift_absolute3 = true; g.items.absolute = (g.items.absolute || 0) + 3;
+    g.feed.push({ k:'sys', text:'A parcel arrives from Professor Marr: 3 Absolute Capsules. “For the champion who has everything except these.”' });
+  }
   return g;
 }
 
@@ -117,10 +122,8 @@ function towerWon(g){ const t = g.tower; t.streak++; t.best = Math.max(t.best, t
 function towerSetClear(g){
   const t = g.tower; t.sets++;
   const cash = 2000 + 300 * t.sets;
-  g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 2; g.items.hypercapsule = (g.items.hypercapsule || 0) + 3; g.money += cash;
-  let extra = '';
-  if (t.sets % 3 === 0) { g.items.absolute = (g.items.absolute || 0) + 1; extra = ' The attendant adds an Absolute Capsule. “For the collection.”'; }
-  return `Five for five. Your prize: 2 Wisdom Fruits, 3 Hyper Capsules and ${fmtMoney(cash)}.${extra} Your streak carries into your next set.`;
+  g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 2; g.items.hypercapsule = (g.items.hypercapsule || 0) + 3; g.items.absolute = (g.items.absolute || 0) + 1; g.money += cash;
+  return `Five for five. Your prize: 2 Wisdom Fruits, 3 Hyper Capsules, an Absolute Capsule and ${fmtMoney(cash)}. Your streak carries into your next set.`;
 }
 function towerLost(g){ const s = g.tower.streak; g.tower.streak = 0; return `Your streak ends at ${s}. The attendant patches up your partners and bows. “The tower will be here.”`; }
 const CODEX_REWARDS = [[10, [['supercapsule',5]]], [25, [['hypercapsule',5],['wisdomfruit',2]]], [40, [], 'starter'], [60, [['maxsalve',3],['wisdomfruit',3]]], [80, [], 'starter'],
@@ -441,6 +444,7 @@ function trainerTeam(id){
 }
 function startTrainer(id, hook){
   if (id === 'tower_foe') ensureTowerFoe(G);
+  else if (TRAINERS[id] && TRAINERS[id].dyn) TRAINERS[id].dyn(G);
   const T = TRAINERS[id];
   const ai = G.diff === 'veteran' && T.ai === 'normal' ? 'smart' : T.ai;
   beginBattle('trainer', trainerTeam(id), { trainer:id, ai, heals:T.heals, hook });
@@ -1354,7 +1358,8 @@ function viewSheet(){
     const champ = r === 'halcyon' ? F(G, 'champion') : F(G, 'champion_' + r);
     return `<h4>${esc(REGIONS[r].n)}${champ ? ' · Champion' : ''}</h4><div class="badges">${list.map(([id, n, leader, town, type]) => `<div class="badge${G.badges.includes(id) ? ' got' : ''}" title="${esc(n)} · ${esc(leader)}, ${esc(town)}"><i style="--bc:${TYPE_COLOR[type]}"></i><span>${esc(n.replace(' Badge', ''))}</span></div>`).join('')}</div>`;
   }).join('');
-  const towerLine = G.tower && (G.tower.sets || G.tower.best) ? `<p class="fine">Summit Tower: best streak ${G.tower.best}, ${G.tower.sets} set${G.tower.sets === 1 ? '' : 's'} cleared.</p>` : '';
+  const towerLine = (G.tower && (G.tower.sets || G.tower.best) ? `<p class="fine">Summit Tower: best streak ${G.tower.best}, ${G.tower.sets} set${G.tower.sets === 1 ? '' : 's'} cleared.</p>` : '')
+    + (G.arena && G.arena.cups ? `<p class="fine">Aurelia Sun Arena: ${G.arena.cups} cup${G.arena.cups === 1 ? '' : 's'} won.</p>` : '');
   return `<div class="sheet"><div class="sh-head"><b class="sh-name">${esc(G.name)}</b><span class="fine">${esc(bg.n)} · ${esc(DIFFS[G.diff].n)} pace</span><span class="fine">${esc(bg.perk)}</span></div>
     <div class="abil">${abil}</div>
     <p class="fine">Proficiency bonus ${sgn(profBonus())}. It grows with every three badges.</p>
