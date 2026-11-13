@@ -295,6 +295,13 @@ S('newtlet','Newtlet',['water'],[42,52,44,60],8,50,[24,'salamance'],'quad',['tai
 S('salamance','Salamance',['water','fighting'],[80,96,74,78],14,180,null,'tall',['tail','spots','fin'],'Stands on its hind legs to box anything that comes too near its pond.');
 S('shelldrip','Shelldrip',['water','bug'],[44,42,66,30],8,50,[30,'conchord'],'round',['shell','antennae'],'A pond snail that leaves a trail of bubbles. It is in no hurry at all.');
 S('conchord','Conchord',['water','bug'],[82,84,108,44],14,175,null,'round',['shell','antennae','spikes'],'Its spiral shell hums a low note whenever the tide turns.');
+S('glimmet','Glimmet',['rock','psychic'],[50,60,80,60],14,90,[58,'comethyst'],'round',['gem','rocks'],'A pebble of meteor glass that floats when it is pleased with itself.');
+S('comethyst','Comethyst',['rock','psychic'],[90,110,120,80],18,240,null,'round',['gem','spikes','crest'],'It remembers the sky it fell from and hums the shape of the stars at night.');
+S('polarion','Polarion',['electric','ice'],[80,104,86,108],17,230,null,'round',['bolt','spikes','antenna'],'Charges itself on the crater’s strange magnetism. Compasses spin when it passes.');
+S('verdrake','Verdrake',['grass','dragon'],[96,112,94,82],18,245,null,'quad',['leaf','horns','tail','wings'],'Moss and vines grow along its scales. It sleeps for a season at a time.');
+S('zenfist','Zenfist',['fighting','psychic'],[84,112,80,104],17,235,null,'tall',['eyes3','mane'],'Meditates under the falling dust of the crater and strikes before you see it move.');
+S('umbradrake','Umbradrake',['dragon','ghost'],[92,120,86,100],20,260,null,'serpent',['horns','wings','teeth'],'A dragon’s shadow that outlived its dragon. It coils in the crater’s darkest folds.');
+S('astraeon','Astraeon',['psychic','electric'],[108,128,100,120],26,340,null,'tall',['crest','gem','tail','aura'],'It rode the skyfall down to Halcyon ten thousand years ago and has been listening ever since.',{legend:true, ex:{1:'recover'}});
 S('lumin','Lumin',['psychic'],[100,100,100,100],24,300,null,'round',['ears','tail','curl','aura'],'A light over the black lake that the Cinderisle scientists only ever glimpsed. Everything Nyxion is, it once was.',{legend:true, ex:{1:'recover'}});
 S('stagspirit','Restless Spirit',['ghost','psychic'],[90,80,80,90],99,180,null,'quad',['ears','mane','aura'],'The grieving spirit of a Hearthstag.',{nocodex:true, ghostly:true});
 
@@ -380,7 +387,7 @@ N('greenwood',{n:'Greenspire Woods', k:'route', x:70, y:135, tier:1, adj:['green
   enc:[['silkgrub',3,5,15],['stingle',3,5,13],['cocoonix',5,6,4],['antlet',3,6,9],['sporemite',4,6,8],['buzzbug',5,6,6],['pipwing',4,6,7],['nibbit',4,6,5],['pipseed',4,6,10],['clawdle',4,6,9],['shelldrip',4,6,7],['mudmouth',5,6,5],['paddlet',4,6,6]], rare:['sparkit',5,6]});
 N('cairnstone',{n:'Cairnstone', k:'town', x:70, y:85, tier:1, haven:'haven', shop:true, adj:['greenwood','moonwell'],
   d:'A quarry town of grey stone and grey dust. Its museum is the town’s pride; its gym is the town’s muscle.'});
-N('moonwell',{n:'Moonwell Caves', k:'cave', x:135, y:60, tier:2, adj:['cairnstone','brightwater'], trainers:['hiker_ulf','spelunker_nell','youngster_tad'],
+N('moonwell',{n:'Moonwell Caves', k:'cave', x:135, y:60, tier:2, adj:['cairnstone','brightwater','crater'], trainers:['hiker_ulf','spelunker_nell','youngster_tad'],
   req:g=>nb(g)>=1, lock:'Dorrin’s apprentices only let badge-holders into the caves.',
   d:'The ceiling glitters where meteor dust has seeped into the rock. Somewhere deep in, a pickaxe rings.',
   enc:[['dusklet',7,10,28],['pebblin',8,11,24],['scrapup',8,10,12],['moonpuff',9,11,7],['shardling',8,11,10],['burrowl',8,11,11],['sandkit',8,10,8]], rare:['quarrion',13,13]});
@@ -441,9 +448,17 @@ N('summitpass',{n:'Summit Pass', k:'cave', x:30, y:140, tier:5, haven:'lodge', s
   req:g=>nb(g)>=8, lock:'The badge gate at Summit Pass opens only for trainers with all eight badges.',
   d:'The badge gates, a ranger lodge, and then a climb through boulder-choked caves to the plateau where the League stands.',
   enc:[['bouldrock',40,44,12],['brawlape',40,44,10],['nocturne',40,44,8],['rhynox',40,43,8],['magmole',40,43,6],['dunemaw',40,42,6],['cerebrix',41,43,6],['quarrion',40,44,8],['brawnback',40,43,8],['crystallus',40,44,7],['polarok',40,44,5],['tunnelord',40,43,6],['ossuarch',40,44,5],['duneclaw',40,43,5],['skywyrm',42,43,3]], rare:['cragwyrm',44,44]});
-N('league',{n:'Summit League', k:'league', x:32, y:88, tier:6, adj:['summitpass'],
+N('league',{n:'Summit League', k:'league', x:32, y:88, tier:6, adj:['summitpass','tower'],
   req:g=>F(g,'pass_cleared'), lock:'Boulders block the way up to the plateau.',
   d:'Five doors in a row, a champion’s hall at the top, and the whole region spread out below the windows.'});
+
+N('crater',{n:'Starfall Crater', k:'cave', x:118, y:38, tier:6, adj:['moonwell'],
+  req:g=>F(g,'crater_open'), lock:'There is no way down past the deepest part of Moonwell Caves. Yet.',
+  d:'A cathedral-sized cavern far below Moonwell, floored with glassy black rock from the ancient skyfall. Every stone glows faintly, the way Moon Stones do.',
+  enc:[['glimmet',56,60,20],['polarion',58,62,11],['zenfist',58,62,11],['verdrake',58,62,9],['comethyst',60,62,6],['cerebrix',58,62,8],['gloomreaper',58,62,8],['skywyrm',58,62,6],['crystallus',58,62,8],['dynacoil',58,62,6]], rare:['umbradrake',64,64]});
+N('tower',{n:'Summit Tower', k:'league', x:40, y:52, tier:6, haven:'haven', shop:true, adj:['league'],
+  req:g=>F(g,'champion'), lock:'The Summit Tower admits only champions.',
+  d:'A tower of white stone above the League, where champions test how long a winning streak can last.'});
 
 /* ---------------- Trainers ---------------- */
 const TRAINERS = {};
@@ -456,7 +471,8 @@ const RIVAL_TEAMS = {
   rival4:[['gustail',25],['voltail',24],['tyrantide',24],[1,27]],
   rival5:[['gustail',37],['voltail',36],['tyrantide',36],['cerebrix',36],[2,40]],
   rival6:[['galecrest',47],['voltail',45],['tyrantide',46],['cerebrix',46],['rhynox',45],[2,50]],
-  champion:[['galecrest',59],['voltail',57],['tyrantide',58],['cerebrix',58],['rhynox',57],[2,62]]
+  champion:[['galecrest',59],['voltail',57],['tyrantide',58],['cerebrix',58],['rhynox',57],[2,62]],
+  r_champion:[['galecrest',74],['voltail',72],['tyrantide',73],['cerebrix',73],['rhynox',72],[2,77]]
 };
 T('rival1','Corin',30,null,'“Let’s see what a type edge is worth.”','“Huh. Beginner’s luck.”',{rival:true});
 T('rival2','Corin',40,null,'“Don’t hold back. I won’t.”','“Fine. You got lucky with the matchups.”',{rival:true});
@@ -525,6 +541,22 @@ T('e_wren','Elite Wren',120,[['polarok',53],['rimeclaw',54],['auroracle',54],['t
 T('e_brann','Elite Brann',120,[['roundhoof',53],['ursaroar',54],['hornbeetle',54],['brawlape',55],['titanus',57]],'“No tricks. Just hands.”','“Good hands.”',{ai:'smart', heals:2});
 T('e_morwen','Elite Morwen',120,[['dreadsail',55],['pyrewraith',56],['ossuarch',55],['gloomreaper',58]],'“Sit with the dead a while.”','“You may go. The living are waiting.”',{ai:'smart', heals:2});
 T('e_draven','Elite Draven',120,[['skywyrm',56],['cragwyrm',57],['tyrantide',57],['cinderdrake',58],['aurorwyrm',60]],'“Dragons are older than you.”','“...And yet.”',{ai:'smart', heals:2});
+T('dorrin2','Leader Dorrin',110,[['bouldrock',62],['quarrion',62],['crystallus',63],['rhynox',63],['cragwyrm',65]],'“Stone remembers.”','“Still got that grit.”',{ai:'smart', heals:2});
+T('maris2','Leader Maris',110,[['tidepearl',62],['brawltoad',62],['kraggler',63],['ampeel',63],['tyrantide',65]],'“The tide came back in!”','“Smooth as ever, champion.”',{ai:'smart', heals:2});
+T('voss2','Leader Voss',110,[['voltail',62],['dynacoil',62],['stormwool',63],['voltbeetle',63],['ampeel',65]],'“Back for more lightning, recruit?”','“Ha! Still a spark!”',{ai:'smart', heals:2});
+T('liora2','Leader Liora',110,[['thornova',62],['fungrove',62],['arborelk',63],['hollowgourd',63],['saguaroar',65]],'“The garden has grown since you left.”','“Lovely. Still lovely.”',{ai:'smart', heals:2});
+T('sable2','Leader Sable',110,[['coilvenom',63],['muckmire',63],['gloomreaper',64],['spinequill',64],['waspear',66]],'“Patience, again.”','“You waited better than I did.”',{ai:'smart', heals:2});
+T('seren2','Leader Seren',110,[['somnivore',63],['glyphowl',63],['auroracle',64],['lunapuff',64],['cerebrix',67]],'“I still cannot see how it ends.”','“Ah. The same way.”',{ai:'smart', heals:2});
+T('blaise2','Leader Blaise',110,[['magmite',64],['blazehound',64],['pyrewraith',65],['magmole',65],['blazemane',68]],'“HOTTER this time!”','“Scorched again! Wonderful!”',{ai:'smart', heals:2});
+T('vane5','Leader Vane',130,[['tunnelord',65],['duneclaw',65],['spinequill',66],['rhynox',66],['bogmaw',66],['sandreaver',70]],'“Again, then.”','“You still mean it. Good.”',{ai:'smart', heals:2});
+T('r_wren','Elite Wren',140,[['polarok',68],['rimeclaw',69],['auroracle',69],['crystallus',69],['blizzowl',70],['tidalrus',72]],'“Colder now.”','“Honest as ever.”',{ai:'smart', heals:2});
+T('r_brann','Elite Brann',140,[['roundhoof',68],['ursaroar',69],['hornbeetle',69],['salamance',69],['brawlape',70],['titanus',72]],'“Hands up.”','“Good hands, still.”',{ai:'smart', heals:2});
+T('r_morwen','Elite Morwen',140,[['dreadsail',70],['pyrewraith',70],['ossuarch',70],['hollowgourd',70],['dollkin',71],['gloomreaper',73]],'“Another dinner for the dead.”','“The living keep winning.”',{ai:'smart', heals:2});
+T('r_draven','Elite Draven',140,[['skywyrm',71],['cragwyrm',72],['tyrantide',72],['cinderdrake',73],['sandreaver',73],['aurorwyrm',75]],'“The dragons wanted a rematch.”','“...And yet. Again.”',{ai:'smart', heals:2});
+T('r_champion','Champion Corin',180,null,'“Title defense. My turn to chase you.”','“Okay. You’re really good. Again sometime?”',{rival:true, ai:'smart', heals:3});
+T('ashen_grunts','Ashen Lantern Guards',60,[['nocturne',60],['muckmire',61],['coilvenom',61]],'“Quill said you might come.”','“Tell Quill we tried.”',{ai:'smart'});
+T('quill','Dr. Hesper Quill',150,[['comethyst',70],['polarion',70],['gloomreaper',71],['cerebrix',71],['sandreaver',72],['umbradrake',74]],'“We will let it decide who it listens to.”','“It never wanted me either.”',{ai:'smart', heals:2});
+T('tower_foe','Tower Challenger',60,[['comethyst',60]],'','“Good battle. Keep climbing.”',{ai:'smart'});
 T('vane4','Cassius Vane',0,[['rhynox',58],['bouldrock',58],['brawlape',59],['magmole',58],['sandreaver',62]],'“It was ours. That has to mean something.”','“Go on, then.”',{ai:'smart', heals:2, nomoney:true});
 
 /* ---------------- Scenes ----------------
@@ -944,6 +976,72 @@ SC('museum2',{node:'cairnstone', title:'The curator’s gift', req:g=>F(g,'champ
     do:g=>{ setF(g,'museum_gift'); giveKey(g, g.codex.caught.spiralith ? 'fossil_talon' : 'fossil_spiral'); }, end:true}
 }});
 
+/* ---- Postgame ---- */
+SC('leaguerematch',{node:'league', title:'Rematch the Summit League', repeat:true, req:g=>F(g,'champion'), steps:{
+  start:{t:'The Summit League has called the Elite Four back, and they have been training since the day you beat them. Five doors again. No Haven between them.', c:[{l:'Open the first door', go:'e1'},{l:'Not today', go:'notyet'}]},
+  notyet:{t:'The doors will wait. They always do.', end:true},
+  e1:{t:'WREN. The ice is thicker this time. “Colder now. Show me.”', c:[{l:'Battle Elite Wren', battle:'r_wren', go:'e2', rematch:true}]},
+  e2:{t:'BRANN. He has taped his knuckles fresh. “Hands up.”', c:[{l:'Battle Elite Brann', battle:'r_brann', go:'e3', rematch:true}]},
+  e3:{t:'MORWEN. The table is set for two this time. “Sit. Eat. Lose.”', c:[{l:'Battle Elite Morwen', battle:'r_morwen', go:'e4', rematch:true}]},
+  e4:{t:'DRAVEN. The wind is worse. “The dragons asked for this.”', c:[{l:'Battle Elite Draven', battle:'r_draven', go:'champ', rematch:true}]},
+  champ:{t:'Corin is sitting in the champion’s chair again, which is technically your chair. “Title defense,” they say, grinning. “My turn to chase you.”', c:[{l:'Battle Champion Corin', battle:'r_champion', go:'hof', rematch:true}]},
+  hof:{t:'Corin laughs and shakes your hand. “Okay. Again sometime?” Your name goes up on the Hall of Fame wall a second time, beside the first.', do:g=>{ g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 3; becomeChampion(g); }, end:true}
+}});
+
+const REMATCHES = [
+  ['cairnstone','dorrin2','Leader Dorrin','Dorrin is chiselling a new boulder seat into the pit wall. “Champion. The stone’s been asking about you.”'],
+  ['brightwater','maris2','Leader Maris','Maris surfaces at the end of the pool and waves. “The champion! Rematch? Say yes. Say yes!”'],
+  ['saltmere','voss2','Leader Voss','Major Voss is rewiring the hangar coils with his bare hands. “Back for more lightning, recruit?”'],
+  ['verdance','liora2','Leader Liora','Liora sets down her tiny scissors. “The garden has grown since you left. So have I.”'],
+  ['fenmarsh','sable2','Leader Sable','Sable is already standing behind you. “Again?”'],
+  ['aurum','seren2','Leader Seren','Seren opens one eye. “I saw you coming. I still cannot see how it ends.”'],
+  ['cinderisle','blaise2','Leader Blaise','Blaise slaps his goggles down. “The CHAMPION! In MY volcano! HA!”'],
+  ['greenspire','vane5','Leader Vane','Vane is back on the dais, jacket folded on the rail. Leading a gym is the one thing he kept. “Again, then.”']
+];
+for (const [node, tid, name, intro] of REMATCHES) SC('rematch_' + tid, {node, title:'Rematch: ' + name, gym:true, repeat:true, req:g=>F(g,'champion'), steps:{
+  start:{t:intro, c:[{l:'Battle ' + name, battle:tid, rematch:true, soft:true, go:'won', lose:'lost'},{l:'Not today', go:'leave'}]},
+  won:{t:g=>TRAINERS[tid].outro + (F(g,'rm_' + tid) ? '' : ' Your first rematch win here earns you two Wisdom Fruits.'), do:g=>{ if (!F(g,'rm_' + tid)) { setF(g,'rm_' + tid); g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 2; } }, end:true},
+  lost:{t:'“Come back when you’re ready. I’ll be here.”', end:true},
+  leave:{t:'Another time.', end:true}
+}});
+
+SC('tower',{node:'tower', title:'Summit Tower challenge', repeat:true, steps:{
+  start:{t:g=>towerIntro(g), c:[{l:'Begin a set of five battles', go:'b1'},{l:'Not now', go:'leave'}]},
+  leave:{t:'The attendant bows you back down the stairs.', end:true},
+  b1:{t:g=>towerRound(g, 1), c:[{l:'Battle', battle:'tower_foe', rematch:true, soft:true, lose:'lost', go:'b2'}]},
+  b2:{t:g=>towerWon(g) + towerRound(g, 2), c:[{l:'Battle', battle:'tower_foe', rematch:true, soft:true, lose:'lost', go:'b3'}]},
+  b3:{t:g=>towerWon(g) + towerRound(g, 3), c:[{l:'Battle', battle:'tower_foe', rematch:true, soft:true, lose:'lost', go:'b4'}]},
+  b4:{t:g=>towerWon(g) + towerRound(g, 4), c:[{l:'Battle', battle:'tower_foe', rematch:true, soft:true, lose:'lost', go:'b5'}]},
+  b5:{t:g=>towerWon(g) + towerRound(g, 5), c:[{l:'Battle', battle:'tower_foe', rematch:true, soft:true, lose:'lost', go:'done'}]},
+  done:{t:g=>towerWon(g) + towerSetClear(g), end:true},
+  lost:{t:g=>towerLost(g), end:true}
+}});
+
+SC('ashen1',{node:'brightwater', title:'An old acquaintance', req:g=>F(g,'champion') && !F(g,'ashen_started'), steps:{
+  start:{t:'On Lantern Bridge, a lean figure in a long grey coat leans on the rail, peeling an orange. Admin Lisk. Or whatever Lisk is now.\n\n“Champion.” A segment of orange. “Umbra’s finished. Mostly. Hesper Quill didn’t get the memo. She ran the Cinderisle lab. She made Nyxion. Now she has a new name for what’s left of us: the Ashen Lantern.”',
+    c:[{l:'“What does she want?”', go:'want'},{l:'“Why tell me?”', chk:['insight',14], go:'honest', fail:'want'}]},
+  honest:{t:'Lisk looks at the water for a long time. “Because I helped her once. I’d like to have helped somebody else since.”', next:'want'},
+  want:{t:'“The skyfall. The meteor that came down in Moonwell before Cairnstone had a name. The museum thinks it was only rock. Quill thinks something rode it down.” Lisk flicks the peel into the canal. “She’s been digging under the deepest caves for a month. Go soon.”', do:g=>setF(g,'ashen_started'), end:true}
+}});
+SC('ashen2',{node:'moonwell', title:'The square shaft', req:g=>F(g,'ashen_started') && !F(g,'crater_open'), steps:{
+  start:{t:'Below the deepest part of Moonwell Caves, someone has cut a new shaft, square and neat, lit with grey lanterns. Two guards in ash-colored coats stand at the top of it.',
+    c:[{l:'Battle the Ashen guards', battle:'ashen_grunts', go:'shaft'},{l:'Slip past them in the dark', chk:['stealth',16], go:'shaft', fail:'spotted'}]},
+  spotted:{t:'A lantern swings toward you. “Champion! Quill said you might come.”', c:[{l:'Battle the Ashen guards', battle:'ashen_grunts', go:'shaft'}]},
+  shaft:{t:'The shaft opens onto a cavern the size of a cathedral, its floor a shallow bowl of glassy black rock. Starfall Crater. The air hums, and every stone glows faintly, the way Moon Stones do. Strange creatures move at the edges of the light.', do:g=>setF(g,'crater_open'), end:true}
+}});
+SC('ashen3',{node:'crater', title:'Dr. Hesper Quill', req:g=>F(g,'crater_open') && !F(g,'quill_beaten'), steps:{
+  start:{t:'At the center of the crater, scaffolding surrounds a lump of dark glass the size of a house. A woman in a white coat over an ash-grey suit reads instruments with her back to you: Dr. Hesper Quill.\n\n“The champion,” she says. “Vane always said you would be somebody’s problem. I made the strongest creature in Halcyon once. It left. This one will not leave. It has slept for ten thousand years, waiting for someone to listen.”',
+    c:[{l:'“Or it’s waiting for you to leave it alone.”', chk:['persuasion',18], adv:g=>F(g,'lisk_turned'), go:'doubt', fail:'fight'},{l:'Challenge her', go:'fight'}]},
+  doubt:{t:'Quill’s hand stops on a dial. For a moment she looks very tired. “Perhaps. Then we will let it decide who it listens to.”', next:'fight', nl:'Face her'},
+  fight:{t:'Quill turns, and the grey lanterns on the scaffolding all brighten at once.', c:[{l:'Battle Dr. Quill', battle:'quill', go:'after'}]},
+  after:{t:'Quill’s last partner falls. She sits down on the scaffolding stairs. “It never wanted me either,” she says. She takes a small white capsule from her pocket and holds it out. “The last Absolute Capsule I ever built. I made it for this. Don’t waste it.”\n\nBehind her, the dark glass begins to glow.', do:g=>{ g.items.absolute = (g.items.absolute || 0) + 1; setF(g,'quill_beaten'); }, end:true}
+}});
+SC('astraeon',{node:'crater', title:'The heart of the skyfall', repeat:true, req:g=>F(g,'quill_beaten') && !F(g,'legend_astraeon'), steps:{
+  start:{t:'The glass at the crater’s heart cracks like an egg. Something unfolds from it: tall, star-pale, crowned with light, its eyes the color of the sky before dawn. Astraeon. It looks at you as if it has been listening to you for a long time.', c:[{l:'Face Astraeon', wild:['astraeon',75], go:'gone', fled:'flee'},{l:'Leave it be for now', go:'flee'}]},
+  flee:{t:'Astraeon settles back into the light of the glass. It will wait. It is very good at waiting.', end:true},
+  gone:{t:g=>g.lastBattle==='caught' ? 'Astraeon fits into the capsule like starlight into a jar. The crater goes dark and quiet.' : 'Astraeon rises through a crack in the crater roof and is gone among the stars. You have a feeling it will come back down.', do:g=>{ if (g.lastBattle==='caught') setF(g,'legend_astraeon'); }, end:true}
+}});
+
 /* Story milestones the AI Dungeon Master is told about. */
 const MILESTONES = [
   ['umbra_met','Team Umbra (black lantern pins) has been seen digging for fossils in Moonwell Caves.'],
@@ -954,5 +1052,7 @@ const MILESTONES = [
   ['corin_bond','The player comforted Corin at their first partner’s grave; the rivalry has softened into friendship.'],
   ['silvane_freed','The player freed the Silvane tower in Aurum City and defeated Director Vane there.'],
   ['lore_nyxion','The player read the Cinderisle journals about Nyxion, a creature grown in the lab that escaped north.'],
-  ['champion','The player is Champion of the Halcyon Region.']
+  ['champion','The player is Champion of the Halcyon Region.'],
+  ['ashen_started','Lisk warned the champion about the Ashen Lantern, an Umbra splinter led by Dr. Hesper Quill, who made Nyxion.'],
+  ['quill_beaten','The champion defeated Dr. Hesper Quill in Starfall Crater, deep under Moonwell Caves.']
 ];

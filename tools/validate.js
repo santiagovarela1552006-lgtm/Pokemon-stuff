@@ -1,7 +1,7 @@
 // Checks every cross-reference in the campaign data. Usage: node tools/validate.js
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const dir = process.argv[2] || path.join(__dirname, '..');
-const src = fs.readFileSync(path.join(dir,'data.js'),'utf8') + '\n' + fs.readFileSync(path.join(dir,'game.js'),'utf8');
+const src = ['data.js','regions.js','game.js'].filter(f => fs.existsSync(path.join(dir, f))).map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n');
 const els = { app:{innerHTML:''}, modal:{innerHTML:'',hidden:true,querySelector:()=>null,contains:()=>false}, toast:{} };
 const ctx = { console, Math, JSON, Date, Promise, Set, Map, Object, Array, String, Number, Error, parseInt, isNaN,
   document:{ addEventListener(){}, querySelector(s){ return els[s.replace('#','')]||null }, getElementById(id){ return els[id]||null }, activeElement:null },

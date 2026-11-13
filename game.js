@@ -24,6 +24,7 @@ const LS_CACHE = {};
 function learnset(id){
   if (LS_CACHE[id]) return LS_CACHE[id];
   const s = SPECIES[id];
+  if (s.apexOf) return (LS_CACHE[id] = learnset(s.apexOf));
   let L;
   if (s.ls) L = s.ls.map(x => x.slice());
   else {
@@ -50,11 +51,13 @@ function newGame(o){
   G = { v:1, name:o.name, bg:o.bg, abil:o.abil, diff:o.diff, money:3000, items:{salve:2}, keys:{}, flags:{}, done:{}, beaten:{},
     badges:[], party:[], ranch:[], node:'thistle', lastHaven:'thistle', visited:{thistle:true}, codex:{seen:{}, caught:{}},
     feed:[], insp:0, uidc:0, starter:null, dmLoot:{}, hof:[], scene:null, B:null, pendingLearn:[], pendingEvo:[],
-    settings:{tier:'quick', speed:'normal'}, created:Date.now(), savedAt:0, lastBattle:null };
+    settings:{tier:'quick', speed:'normal'}, created:Date.now(), savedAt:0, lastBattle:null, tower:{streak:0, best:0, sets:0, foe:null} };
 }
 function migrate(g){
   const base = { items:{}, keys:{}, flags:{}, done:{}, beaten:{}, badges:[], party:[], ranch:[], visited:{}, codex:{seen:{}, caught:{}}, feed:[], insp:0, uidc:0, dmLoot:{}, hof:[], scene:null, B:null, pendingLearn:[], pendingEvo:[], settings:{tier:'quick', speed:'normal'}, lastHaven:'thistle', node:'thistle', money:0 };
   for (const k in base) if (g[k] === undefined) g[k] = base[k];
+  if (!g.tower) g.tower = { streak:0, best:0, sets:0, foe:null };
+  if (!g.B) for (const m of [...g.party, ...g.ranch]) if (m.apexFrom) { m.sp = m.apexFrom; delete m.apexFrom; }
   if (!g.settings.speed) g.settings.speed = 'normal';
   if (!NODES[g.node]) g.node = 'thistle';
   return g;
@@ -76,7 +79,37 @@ function gift(g, sp, lvl){ const m = makeMon(sp, lvl); const where = addMon(m); 
 function topLevel(g){ return g.party.reduce((a, m) => Math.max(a, m.lvl), 0); }
 function strongestName(g){ const m = g.party.slice().sort((a, b) => b.lvl - a.lvl)[0]; return m ? mname(m) : 'Your partner'; }
 function pickStarter(g, sp){ g.starter = sp; addMon(makeMon(sp, 5)); }
-function becomeChampion(g){ setF(g, 'champion'); g.hof.push({ at:Date.now(), team:g.party.map(m => ({ sp:m.sp, lvl:m.lvl })) }); UI.pendingHof = true; }
+function becomeChampion(g){ setF(g, 'champion'); g.hof.push({ at:Date.now(), region:'halcyon', team:g.party.map(m => ({ sp:m.apexFrom || m.sp, lvl:m.lvl })) }); UI.pendingHof = true; }
+function becomeRegionChampion(g, r){ setF(g, 'champion_' + r); g.hof.push({ at:Date.now(), region:r, team:g.party.map(m => ({ sp:m.apexFrom || m.sp, lvl:m.lvl })) }); UI.pendingHof = true; }
+function badgeRegion(id){ const b = BADGES.find(x => x[0] === id); return (b && b[5]) || 'halcyon'; }
+function rb(g, r){ return g ? g.badges.filter(b => badgeRegion(b) === r).length : 0; }
+
+/* ---------- Summit Tower ---------- */
+const TOWER_NAMES = ['Ace Trainer Wilda','Veteran Osric','Dragon Tamer Ysolde','Psychic Calloway','Black Belt Haru','Swimmer Nerys','Ranger Fennick','Hiker Bartholomew','Mystic Odile','Gentleman Ashby','Duelist Kestrel','Scholar Imogen','Bird Keeper Lark','Ace Trainer Corvin','Veteran Maud','Firebreather Ignatz','Skier Pell','Captain Marisol'];
+const TOWER_LINES = ['“Let’s see that champion’s pin earn its keep.”','“I’ve watched your last three battles. I took notes.”','“Five in a row? Not on my floor.”','“The tower remembers everyone who falls here.”','“I came from three regions away for this.”','“Don’t mind me. I’m just the next one.”'];
+const TOWER_POOL = CODEX_IDS.filter(id => !SPECIES[id].evo && !SPECIES[id].legend && SPECIES[id].b.reduce((a, b) => a + b, 0) >= 300);
+function ensureTowerFoe(g){
+  const f = (g.tower && g.tower.foe) || { name:'Tower Challenger', team:[['comethyst',60]], intro:'' };
+  TRAINERS.tower_foe = Object.assign(TRAINERS.tower_foe || {}, { id:'tower_foe', name:f.name, mult:60, team:f.team, intro:f.intro, outro:'“Good battle. Keep climbing.”', ai:'smart', heals:g.tower && g.tower.streak >= 10 ? 1 : 0 });
+}
+function towerGen(g){
+  const lvl = 55 + Math.min(30, g.tower.streak), pool = TOWER_POOL.slice(), team = [];
+  for (let i = 0; i < 3; i++) team.push([pool.splice(rnd(pool.length), 1)[0], Math.min(100, lvl + rnd(3))]);
+  g.tower.foe = { name:pick(TOWER_NAMES), team, intro:pick(TOWER_LINES) };
+  ensureTowerFoe(g);
+}
+function towerIntro(g){ const t = g.tower; return `The attendant at the foot of the Summit Tower bows. “Five battles in a row, champion, against challengers from every corner of the world. No rest between them. Only what you carry. Your streak carries over from set to set, and so does the difficulty.”\n\nCurrent streak: ${t.streak}. Best streak: ${t.best}. Sets cleared: ${t.sets}.`; }
+function towerRound(g, n){ towerGen(g); const f = g.tower.foe; return `Battle ${n} of 5. ${f.name} steps onto the platform with three partners around level ${f.team[0][1]}.`; }
+function towerWon(g){ const t = g.tower; t.streak++; t.best = Math.max(t.best, t.streak); return `Win. That’s ${t.streak} in a row.\n\n`; }
+function towerSetClear(g){
+  const t = g.tower; t.sets++;
+  const cash = 2000 + 300 * t.sets;
+  g.items.wisdomfruit = (g.items.wisdomfruit || 0) + 2; g.items.hypercapsule = (g.items.hypercapsule || 0) + 3; g.money += cash;
+  let extra = '';
+  if (t.sets % 3 === 0) { g.items.absolute = (g.items.absolute || 0) + 1; extra = ' The attendant adds an Absolute Capsule. “For the collection.”'; }
+  return `Five for five. Your prize: 2 Wisdom Fruits, 3 Hyper Capsules and ${fmtMoney(cash)}.${extra} Your streak carries into your next set.`;
+}
+function towerLost(g){ const s = g.tower.streak; g.tower.streak = 0; return `Your streak ends at ${s}. The attendant patches up your partners and bows. “The tower will be here.”`; }
 const CODEX_REWARDS = [[10, [['supercapsule',5]]], [25, [['hypercapsule',5],['wisdomfruit',2]]], [40, [], 'starter'], [60, [['maxsalve',3],['wisdomfruit',3]]], [80, [], 'starter'],
   [100, [['hypercapsule',10]], 'lumin'], [150, [['absolute',1],['wisdomfruit',5]]], [CODEX_IDS.length, [['maxsalve',5],['revive',5]]]];
 function caughtCount(g){ return CODEX_IDS.filter(id => g.codex.caught[id]).length; }
@@ -150,7 +183,7 @@ function learnMove(m, mv, say){
 }
 
 /* ================= Checks ================= */
-function profBonus(){ return 2 + Math.floor(nb(G) / 3); }
+function profBonus(){ return Math.min(6, 2 + Math.floor(nb(G) / 3)); }
 function checkInfo(skill){
   if (skill === 'luck') return { label:'Luck', bonus:0 };
   if (ABIL[skill]) return { label:ABIL[skill], bonus:amod(G.abil[skill]) };
@@ -289,14 +322,16 @@ function commit(){ saveGame(); render(); }
 
 /* ================= Travel & exploring ================= */
 function canEnter(id){ const n = NODES[id]; return !n.req || n.req(G); }
-function canCoach(id){ const n = NODES[id]; return nb(G) >= 2 && !!G.visited[id] && !!n.haven && id !== G.node && !NODES[G.node].adj.includes(id) && canEnter(id); }
+function canCoach(id){ const n = NODES[id]; return nb(G) >= 2 && !!G.visited[id] && !!n.haven && id !== G.node && n.rg === NODES[G.node].rg && !NODES[G.node].adj.includes(id) && canEnter(id); }
+function crossWay(a, b){ return (NODES[a].rg === 'nordhaven' || NODES[b].rg === 'nordhaven') ? 'airship' : 'ferry'; }
 function travel(id){
   if (!G || G.B || G.scene) return;
   const n = NODES[id], adj = NODES[G.node].adj.includes(id), coach = canCoach(id);
   if (!adj && !coach) return;
   if (!canEnter(id)) { toast(n.lock || 'You can’t go there yet.'); return; }
+  const cross = n.rg !== NODES[G.node].rg, way = cross ? crossWay(G.node, id) : '';
   G.node = id; G.visited[id] = true; UI.panel = 'explore';
-  pushFeed({ k:'travel', text:n.n, sub: coach ? 'by coach' : '' });
+  pushFeed({ k:'travel', text:n.n + (cross ? ', ' + REGIONS[n.rg].n : ''), sub: cross ? 'by ' + way : coach ? 'by coach' : '' });
   const auto = Object.values(SCENES).find(S => S.auto && sceneAvail(S));
   if (auto) startScene(auto.id);
   commit();
@@ -378,6 +413,7 @@ function trainerTeam(id){
   return team.map(([s, l]) => makeMon(s, Math.max(2, Math.round(l * DIFF().lvl)), true));
 }
 function startTrainer(id, hook){
+  if (id === 'tower_foe') ensureTowerFoe(G);
   const T = TRAINERS[id];
   const ai = G.diff === 'veteran' && T.ai === 'normal' ? 'smart' : T.ai;
   beginBattle('trainer', trainerTeam(id), { trainer:id, ai, heals:T.heals, hook });
@@ -391,7 +427,7 @@ function beginBattle(kind, foe, o){
   const f = foe[0];
   markSeen(f.sp);
   if (kind === 'wild') qf(G.B.legendary ? `${SPECIES[f.sp].n} rises to meet you. (Lv ${f.lvl})` : `A wild ${SPECIES[f.sp].n} appears! (Lv ${f.lvl})`, 'big');
-  else { const T = TRAINERS[o.trainer]; qf(`${T.name} wants to battle!`, 'big'); if (T.intro) qf(T.intro, 'quote'); qf(`${T.name} sends out ${SPECIES[f.sp].n} (Lv ${f.lvl}).`); }
+  else { const T = TRAINERS[o.trainer]; qf(`${T.name} wants to battle!`, 'big'); if (T.intro) qf(T.intro, 'quote'); qf(`${T.name} sends out ${SPECIES[f.sp].n} (Lv ${f.lvl}).`); foeMaybeAscend(); }
   qf(`Go, ${mname(G.party[pi])}!`);
   if (o.ambush) { qf('The wild creature strikes first!', 'muted'); useMove('f', chooseFoeMove()); resolveFaints(); }
   play();
@@ -494,6 +530,7 @@ function resolveFaints(){
     if (nxt < 0) { victory(); return true; }
     B.fi = nxt; B.st.f = stages0(); markSeen(B.foe[nxt].sp);
     qf(`${TRAINERS[B.trainer].name} sends out ${SPECIES[B.foe[nxt].sp].n} (Lv ${B.foe[nxt].lvl}).`);
+    foeMaybeAscend();
   }
   const P = actP();
   if (P.hp <= 0 && !B.fainted.includes(P.uid)) {
@@ -547,6 +584,26 @@ function chooseFoeMove(){
   return ms[0];
 }
 function canDamage(A, D){ return A.moves.some(mv => MOVES[mv].p && effOf(MOVES[mv].t, SPECIES[D.sp].t) > 0); }
+/* ---------- Apex Ascension ---------- */
+function apexFor(m){ const id = 'apex_' + m.sp; return SPECIES[id] ? id : null; }
+function canAscend(){
+  const B = G.B; if (!B || B.apexUsed || !G.keys.apexband) return false;
+  const P = actP(); return P.hp > 0 && !P.apexFrom && !!apexFor(P) && !!G.keys['apexstone_' + P.sp];
+}
+function ascend(side){
+  const B = G.B, m = side === 'p' ? actP() : actF(), into = apexFor(m); if (!into) return;
+  const name = nameOf(side, m);
+  m.apexFrom = m.sp; m.sp = into;
+  if (side === 'p') B.apexUsed = true; else B.foeApexUsed = true;
+  qf(side === 'p' ? `${name}’s Apex Stone answers your Apex Band!` : `${TRAINERS[B.trainer].name}’s Apex Band flares!`, 'status');
+  qf(`${name} ascends into ${SPECIES[into].n}!`, 'big');
+}
+function foeMaybeAscend(){
+  const B = G.B; if (!B.trainer || B.foeApexUsed) return;
+  const T = TRAINERS[B.trainer]; if (!T.apex) return;
+  const want = T.apex.map(a => a === 'starter' ? (RIVAL_LINE[G.starter] || RIVAL_LINE.emberkit)[2] : a);
+  const F0 = actF(); if (want.includes(F0.sp) && apexFor(F0)) ascend('f');
+}
 function foeDecide(){
   const B = G.B, Fo = actF();
   if (B.heals > 0 && Fo.hp < maxHP(Fo) * .3 && Math.random() < .6) return { type:'heal' };
@@ -637,8 +694,8 @@ function endRound(){
 }
 function finishBattle(){
   const B = G.B; if (!B || !B.over || B.queue.length) return;
-  const res = B.result, hook = B.hook, foeName = SPECIES[B.foe[0].sp].n;
-  for (const m of G.party) { m.st = null; m.slp = 0; }
+  const res = B.result, hook = B.hook, foeName = SPECIES[B.foe[0].apexFrom || B.foe[0].sp].n;
+  for (const m of G.party) { m.st = null; m.slp = 0; if (m.apexFrom) { m.sp = m.apexFrom; delete m.apexFrom; } }
   G.lastBattle = res; G.B = null;
   const inScene = hook && G.scene && G.scene.id === hook.scene;
   if (res === 'lose') {
@@ -715,7 +772,7 @@ function dmPrompt(action){
 - The scripted campaign owns the main plot. Do not award badges, key items or story progress, do not resolve Umbra's schemes, and do not move the player to another location. If the player tries something the story handles (a gym, a locked road, a story event), say it can't happen right now or point them toward it, with no check.
 - Wild creatures that live here: ${here.length ? here.join(', ') : 'none (this is a settlement)'}. Mention no other species.
 - Keep effects small and earned. Most actions need no effects at all.`,
-`Location: ${n.n}. ${n.d}
+`Location: ${n.n}, in ${(REGIONS[n.rg] || REGIONS.halcyon).n}. ${n.d}
 Trainer: ${G.name}, ${bg.n}. Skill bonuses: ${skills}. Money: ${G.money} crowns. Badges: ${badges}.
 Party: ${party}.
 Story so far:
@@ -967,27 +1024,29 @@ function d20svg(v, kind){
 /* ================= Map ================= */
 const LAND = 'M18,40 L60,22 L120,30 L160,12 L240,10 L300,8 L340,30 L370,60 L388,110 L380,160 L390,220 L385,268 L340,282 L285,276 L260,240 L230,222 L190,218 L140,222 L110,240 L100,280 L55,292 L40,262 L30,220 L10,180 L8,120 L12,70 Z';
 const ISLANDS = [[205,283,22,11],[122,284,24,12],[226,251,16,9]];
-const LABEL_POS = { underpass:[-9, 3.2, 'end'], ashgrove:[-9, 3.2, 'end'], wildreach:[-9, 3.2, 'end'], stormworks:[-9, 3.2, 'end'], league:[-5, -10, 'start'], summitpass:[-5, -10, 'start'] };
+const LABEL_POS = { underpass:[-9, 3.2, 'end'], ashgrove:[-9, 3.2, 'end'], wildreach:[-9, 3.2, 'end'], stormworks:[-9, 3.2, 'end'], league:[-5, -10, 'start'], summitpass:[-5, -10, 'start'], tower:[-5, -10, 'start'], s_league:[-5, -10, 'start'] };
 const SEA_NODES = { rimefrost:1, cinderisle:1, stormworks:1 };
 function mapSVG(){
-  const cur = NODES[G.node];
+  const cur = NODES[G.node], R = REGIONS[cur.rg] || REGIONS.halcyon;
+  const here = Object.values(NODES).filter(n => n.rg === cur.rg);
   const edges = [], done = new Set();
-  for (const a of Object.values(NODES)) for (const b of a.adj) {
+  for (const a of here) for (const b of a.adj) {
+    if (NODES[b].rg !== cur.rg) continue;
     const k = [a.id, b].sort().join('|'); if (done.has(k)) continue; done.add(k);
     const B = NODES[b], sea = SEA_NODES[a.id] || SEA_NODES[b];
     edges.push(`<line x1="${a.x}" y1="${a.y}" x2="${B.x}" y2="${B.y}" class="${sea ? 'm-sea' : 'm-road'}"/>`);
   }
-  const nodes = Object.values(NODES).map(n => {
+  const nodes = here.map(n => {
     const here = n.id === G.node, adj = cur.adj.includes(n.id), coach = canCoach(n.id), open = canEnter(n.id);
     const go = (adj || coach) && !here;
     const cls = ['m-node', 'k-' + n.k, here ? 'here' : '', go ? (open ? 'go' : 'locked') : '', G.visited[n.id] ? 'seen' : ''].join(' ');
     const shape = n.k === 'town' ? `<circle r="6.2"/>` : n.k === 'league' ? `<rect x="-6" y="-6" width="12" height="12" transform="rotate(45)"/>` : n.k === 'cave' ? `<path d="M0,-6.5 L6.5,0 L0,6.5 L-6.5,0 Z"/>` : `<circle r="3.8"/>`;
-    const [lx, ly, la] = LABEL_POS[n.id] || [9, 3.2, 'start'];
+    const [lx, ly, la] = n.lp || LABEL_POS[n.id] || [9, 3.2, 'start'];
     const lbl = `<text x="${lx}" y="${ly}" text-anchor="${la}">${esc(n.n)}</text>`;
     const attrs = go ? ` data-a="travel" data-v="${n.id}" role="button" tabindex="0" aria-label="${esc((adj ? 'Travel to ' : 'Coach to ') + n.n + (open ? '' : ' (locked)'))}"` : '';
     return `<g class="${cls}" transform="translate(${n.x} ${n.y})"${attrs}>${here ? '<circle class="m-pulse" r="11"/>' : ''}${shape}${lbl}</g>`;
   }).join('');
-  return `<svg class="map" viewBox="0 0 400 300" role="img" aria-label="Map of the Halcyon Region"><rect width="400" height="300" class="m-water"/><path d="${LAND}" class="m-land"/>${ISLANDS.map(([x, y, rx, ry]) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" class="m-land"/>`).join('')}${edges.join('')}${nodes}</svg>`;
+  return `<svg class="map" viewBox="0 0 400 300" role="img" aria-label="Map of ${esc(R.n)}"><rect width="400" height="300" class="m-water"/><path d="${R.land}" class="m-land"/>${R.islands.map(([x, y, rx, ry]) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" class="m-land"/>`).join('')}${edges.join('')}${nodes}</svg>`;
 }
 
 /* ================= Rendering ================= */
@@ -1061,8 +1120,8 @@ function viewHeader(){
   const n = NODES[G.node];
   return `<header class="bar"><div class="bar-in">
     <span class="brand">Halcyon Road</span>
-    <span class="where"><span class="eyebrow">Now in</span>${esc(n.n)}</span>
-    <span class="stats"><span class="stat num">${fmtMoney(G.money)}</span><span class="stat">${G.badges.length}/8 badges</span><span class="stat insp${G.insp ? ' on' : ''}" title="Inspiration: spend it to reroll a failed check">${G.insp ? 'Inspired' : 'No Inspiration'}</span></span>
+    <span class="where"><span class="eyebrow">${esc((REGIONS[n.rg] || REGIONS.halcyon).n)}</span>${esc(n.n)}</span>
+    <span class="stats"><span class="stat num">${fmtMoney(G.money)}</span><span class="stat">${rb(G, n.rg)}/8 badges</span><span class="stat insp${G.insp ? ' on' : ''}" title="Inspiration: spend it to reroll a failed check">${G.insp ? 'Inspired' : 'No Inspiration'}</span></span>
     <span class="bar-btns"><button class="btn sm" data-a="save" ${G.B ? 'disabled' : ''}>Save</button><button class="btn sm" data-a="menu">Menu</button></span>
   </div></header>`;
 }
@@ -1103,7 +1162,7 @@ function viewExplore(){
   if (n.haven) { svc.push(`<button class="btn act" data-a="rest">${n.haven === 'home' ? 'Rest at home' : n.haven === 'lodge' ? 'Rest at the ranger lodge' : 'Rest at the Haven'}<span class="act-sub">Heal every partner</span></button>`); svc.push(`<button class="btn act" data-a="panel" data-v="ranch">Visit the ranch<span class="act-sub">${G.ranch.length} partner${G.ranch.length === 1 ? '' : 's'} waiting</span></button>`); }
   if (n.shop) svc.push(`<button class="btn act" data-a="panel" data-v="shop">${G.node === 'verdance' ? 'Verdance Department Store' : 'The Outfitter'}<span class="act-sub">Capsules and medicine</span></button>`);
   if (n.dice) svc.push(`<button class="btn act" data-a="panel" data-v="dice">Lucky Lantern dice table<span class="act-sub">Bet on 2d6</span></button>`);
-  const adj = n.adj.map(id => { const m = NODES[id], open = canEnter(id); return `<button class="btn act${open ? '' : ' locked'}" data-a="travel" data-v="${id}">${esc(m.n)}<span class="act-sub">${open ? (G.visited[id] ? 'Visited' : 'Not yet visited') : 'Locked'}</span></button>`; }).join('');
+  const adj = n.adj.map(id => { const m = NODES[id], open = canEnter(id), cross = m.rg !== n.rg; return `<button class="btn act${open ? '' : ' locked'}${cross ? ' story' : ''}" data-a="travel" data-v="${id}">${cross ? `<span class="act-k">${crossWay(G.node, id) === 'airship' ? 'Airship' : 'Ferry'} to ${esc(REGIONS[m.rg].n)}</span>` : ''}${esc(m.n)}<span class="act-sub">${open ? (G.visited[id] ? 'Visited' : 'Not yet visited') : 'Locked'}</span></button>`; }).join('');
   return `<section class="explore">
     <header class="loc"><p class="eyebrow">${kinds.join(' · ')}</p><h2>${esc(n.n)}</h2><p class="loc-d">${esc(n.d)}</p></header>
     <div class="chron" id="chron" aria-live="polite">${G.feed.slice(-26).map(feedHTML).join('') || '<p class="f-sys">Your story starts here.</p>'}</div>
@@ -1172,7 +1231,7 @@ function viewBattle(){
     const ok = m => it.kind === 'revive' ? m.hp <= 0 : it.kind === 'cure' ? m.hp > 0 && m.st : m.hp > 0 && m.hp < maxHP(m);
     menu = `<p class="fine">Use ${esc(it.n)} on…</p><div class="bgrid">${G.party.map(m => `<button class="btn" data-a="btarget" data-v="${id}|${m.uid}" ${ok(m) ? '' : 'disabled'}>${esc(mname(m))} <span class="fine">${m.hp}/${maxHP(m)}${m.st ? ' · ' + ST_LABEL[m.st] : ''}</span></button>`).join('')}</div><button class="btn sm" data-a="bmenu" data-v="bag">Back</button>`;
   } else if (B.menu === 'party') menu = `<div class="bgrid">${G.party.map((m, i) => i !== B.pi && m.hp > 0 ? `<button class="btn" data-a="bswap" data-v="${i}">${esc(mname(m))} <span class="fine">Lv ${m.lvl} · ${m.hp}/${maxHP(m)}</span></button>` : '').join('') || '<p class="fine">No one else can fight.</p>'}</div><button class="btn sm" data-a="bmenu" data-v="main">Back</button>`;
-  else menu = `<div class="bgrid main"><button class="btn primary" data-a="bmenu" data-v="fight">Fight</button><button class="btn" data-a="bmenu" data-v="bag">Bag</button><button class="btn" data-a="bmenu" data-v="party">Switch</button>${B.kind === 'wild' ? '<button class="btn" data-a="brun">Run</button>' : ''}</div>`;
+  else menu = `<div class="bgrid main"><button class="btn primary" data-a="bmenu" data-v="fight">Fight</button><button class="btn" data-a="bmenu" data-v="bag">Bag</button><button class="btn" data-a="bmenu" data-v="party">Switch</button>${B.kind === 'wild' ? '<button class="btn" data-a="brun">Run</button>' : ''}${canAscend() ? `<button class="btn apex" data-a="bascend">Ascend<span class="btn-sub">Once per battle</span></button>` : ''}</div>`;
   return `<section class="battle">
     <p class="eyebrow">${B.kind === 'wild' ? (B.legendary ? 'Legendary encounter' : 'Wild encounter') : 'Trainer battle · ' + esc(T.name)} · ${esc(NODES[G.node].n)}</p>
     <div class="mat">
@@ -1194,10 +1253,11 @@ function moveBtn(P, Fo, mv){
 }
 function viewMap(){
   const coach = Object.keys(NODES).filter(canCoach);
-  return `<section class="mapv"><p class="eyebrow">The Halcyon Region</p><h2>Where to?</h2>
+  const cur = NODES[G.node];
+  return `<section class="mapv"><p class="eyebrow">${esc((REGIONS[cur.rg] || REGIONS.halcyon).n)}</p><h2>Where to?</h2>
     <div class="map-wrap">${mapSVG()}</div>
-    <p class="fine">Highlighted places are one road away${nb(G) >= 2 ? ', or a coach ride to a town you’ve visited' : ''}. Locked places show what’s stopping you.</p>
-    <div class="grp"><h3>Roads from ${esc(NODES[G.node].n)}</h3><div class="grp-b">${NODES[G.node].adj.map(id => { const open = canEnter(id); return `<button class="btn act${open ? '' : ' locked'}" data-a="travel" data-v="${id}">${esc(NODES[id].n)}<span class="act-sub">${open ? 'Travel' : esc(NODES[id].lock || 'Locked')}</span></button>`; }).join('')}</div></div>
+    <p class="fine">Highlighted places are one road away${nb(G) >= 2 ? ', or a coach ride to a town you’ve visited in this region' : ''}. Locked places show what’s stopping you.</p>
+    <div class="grp"><h3>Roads from ${esc(cur.n)}</h3><div class="grp-b">${cur.adj.map(id => { const open = canEnter(id), cross = NODES[id].rg !== cur.rg; return `<button class="btn act${open ? '' : ' locked'}${cross ? ' story' : ''}" data-a="travel" data-v="${id}">${cross ? `<span class="act-k">${crossWay(G.node, id) === 'airship' ? 'Airship' : 'Ferry'} to ${esc(REGIONS[NODES[id].rg].n)}</span>` : ''}${esc(NODES[id].n)}<span class="act-sub">${open ? 'Travel' : esc(NODES[id].lock || 'Locked')}</span></button>`; }).join('')}</div></div>
     ${coach.length ? `<div class="grp"><h3>Coach</h3><div class="grp-b">${coach.map(id => `<button class="btn act" data-a="travel" data-v="${id}">${esc(NODES[id].n)}<span class="act-sub">Ride the coach</span></button>`).join('')}</div></div>` : ''}
     <button class="btn" data-a="panel" data-v="explore">Close the map</button></section>`;
 }
@@ -1260,12 +1320,18 @@ function viewSheet(){
   const bg = BACKGROUNDS[G.bg];
   const abil = ABIL_ORDER.map(ab => `<div class="abox"><span class="ab">${ab.toUpperCase()}</span><span class="sv">${G.abil[ab]}</span><span class="sm">${sgn(amod(G.abil[ab]))}</span></div>`).join('');
   const skills = Object.keys(SKILLS).map(k => { const i = checkInfo(k); return `<li class="${i.prof ? 'prof' : ''}"><span>${i.prof ? '●' : '○'} ${i.label} <span class="fine">(${SKILLS[k][1].toUpperCase()})</span></span><span class="num">${sgn(i.bonus)}</span></li>`; }).join('');
-  const badges = BADGES.map(([id, n, leader, town, type]) => `<div class="badge${G.badges.includes(id) ? ' got' : ''}" title="${esc(n)} · ${esc(leader)}, ${esc(town)}"><i style="--bc:${TYPE_COLOR[type]}"></i><span>${esc(n.replace(' Badge', ''))}</span></div>`).join('');
+  const badges = Object.keys(REGIONS).map(r => {
+    if (r !== 'halcyon' && !F(G, r + '_arrived') && rb(G, r) === 0) return '';
+    const list = BADGES.filter(b => (b[5] || 'halcyon') === r);
+    const champ = r === 'halcyon' ? F(G, 'champion') : F(G, 'champion_' + r);
+    return `<h4>${esc(REGIONS[r].n)}${champ ? ' · Champion' : ''}</h4><div class="badges">${list.map(([id, n, leader, town, type]) => `<div class="badge${G.badges.includes(id) ? ' got' : ''}" title="${esc(n)} · ${esc(leader)}, ${esc(town)}"><i style="--bc:${TYPE_COLOR[type]}"></i><span>${esc(n.replace(' Badge', ''))}</span></div>`).join('')}</div>`;
+  }).join('');
+  const towerLine = G.tower && (G.tower.sets || G.tower.best) ? `<p class="fine">Summit Tower: best streak ${G.tower.best}, ${G.tower.sets} set${G.tower.sets === 1 ? '' : 's'} cleared.</p>` : '';
   return `<div class="sheet"><div class="sh-head"><b class="sh-name">${esc(G.name)}</b><span class="fine">${esc(bg.n)} · ${esc(DIFFS[G.diff].n)} pace</span><span class="fine">${esc(bg.perk)}</span></div>
     <div class="abil">${abil}</div>
     <p class="fine">Proficiency bonus ${sgn(profBonus())}. It grows with every three badges.</p>
     <h3>Skills</h3><ul class="skills">${skills}</ul>
-    <h3>Badges</h3><div class="badges">${badges}</div>
+    <h3>Badges</h3>${badges}${towerLine}
     ${G.hof.length ? `<h3>Hall of Fame</h3><p class="fine">Champion ${G.hof.length} time${G.hof.length === 1 ? '' : 's'}.</p>` : ''}</div>`;
 }
 function viewCodex(){
@@ -1300,7 +1366,9 @@ function openEvo(m, into, cb){
     buttons:[{ label:'Let it evolve', primary:true, fn:() => { evolve(m, into); UI.modal = null; cb(); } }, { label:'Not now', fn:() => { UI.modal = null; cb(); } }] });
 }
 function openHof(){
-  openModal({ title:'Hall of Fame', html:`<p>${esc(G.name)}, Champion of the Halcyon Region.</p><div class="hof">${G.party.map(m => `<div>${sprite(m.sp, { cls:'md' })}<b>${esc(mname(m))}</b><span class="fine">Lv ${m.lvl}</span></div>`).join('')}</div><p class="fine">The road goes on. Something waits in the Hollow Below, under Cape Thorn, and three legendary birds still roost in the wild places of Halcyon.</p>`,
+  const last = G.hof[G.hof.length - 1] || {}, r = last.region || 'halcyon';
+  const next = r === 'halcyon' ? 'The road goes on. The ferry at Port Saltmere now sails south to Solenne, the Summit Tower above the League is open, and something still waits in the Hollow Below.' : r === 'solenne' ? 'An airship now leaves Aurelia for Nordhaven, far to the north.' : 'Three regions, three Halls of Fame. Rematches, the Summit Tower and every Codex entry are still out there.';
+  openModal({ title:'Hall of Fame', html:`<p>${esc(G.name)}, Champion of ${esc(REGIONS[r].n)}.</p><div class="hof">${G.party.map(m => `<div>${sprite(m.apexFrom || m.sp, { cls:'md' })}<b>${esc(mname(m))}</b><span class="fine">Lv ${m.lvl}</span></div>`).join('')}</div><p class="fine">${next}</p>`,
     buttons:[{ label:'Keep playing', primary:true, fn:closeModal }] });
 }
 function openMonInfo(uid){
@@ -1404,6 +1472,7 @@ const ACTIONS = {
   bdone(){ finishBattle(); },
   bmenu(v){ if (G.B) { G.B.menu = v; render(); } },
   bmove(v){ playerAction({ type:'move', id:v }); },
+  bascend(){ const B = G.B; if (!B || B.over || B.queue.length || ANIM || B.needSwitch || !canAscend()) return; ascend('p'); play(); },
   brun(){ playerAction({ type:'run' }); },
   bswap(v){ playerAction({ type:'switch', idx:+v }); },
   bswitch(v){ playerAction({ type:'switch', idx:+v }); },
